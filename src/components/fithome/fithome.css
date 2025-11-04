@@ -1,113 +1,188 @@
-.fit-home-container {
-    display: flex;
-    justify-content: space-between;
+/* Layout */
+.fit-home-container{
+  display:flex;
+  justify-content:space-between;
+  min-height:100svh;            /* mobile-safe fullscreen */
 }
 
-.fit-home-left {
-    flex: 3;
-    padding: 2rem;
-    padding-right: 1.5rem;
+/* Left */
+.fit-home-left{
+  flex:3;
+  padding:2rem;
+  padding-right:1.5rem;
 }
 
-.fit-home-right {
-    flex: 1;
-    padding: 2rem;
+/* Right red panel */
+.fit-home-right{
+  flex:1;
+  position:relative;
+  background-color:var(--red);
+  min-height:100svh;
+  height:auto;
 }
 
+/* Welcome pill */
 .fit-home-content{
-    margin-top: 4rem;
-    background-color: #363d36;
-    border-radius: 4rem;
-    width: fit-content;
-    padding: 20px 13px;
-    text-transform: uppercase;
-    color: white;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
+  margin-top:4rem;
+  background-color:#363d36;
+  border-radius:4rem;
+  /* width: fit-content;  <-- REMOVE */
+  display:inline-flex;          /* behaves like fit-content but wraps */
+  max-width:100%;
+  padding:20px 13px;
+  text-transform:uppercase;
+  color:#fff;
+  position:relative;
+  align-items:center;
+  justify-content:flex-start;
+  overflow:hidden;
 }
-
-.fit-home-content>span{
-
-    z-index: 2;
-}
-
+.fit-home-content>span{ z-index:2; position:relative; }
 .fit-home-content>div{
-    position: absolute;
-    height: 80%;
-    width: 5.4rem;
-    border-radius: 3rem;
-    background-color: var(--red);
-    margin-right: 1rem;
-    left: 8px;
-    z-index: 1;
+  position:absolute;
+  height:80%;
+  width:5.4rem;
+  max-width:35%;
+  border-radius:3rem;
+  background-color:var(--red);
+  left:8px;
+  z-index:1;
 }
 
+/* Big headings */
 .fit-home-tag{
-   display: flex;
-   flex-direction: column;
-   gap: 1.5rem;
-   text-transform: uppercase;
-   font-size: 2.5rem;
-   font-weight:bold ;
-   color: white;
-   text-overflow: inherit;
-   padding-top: 2rem;
+  display:flex;
+  flex-direction:column;
+  gap:1.5rem;
+  text-transform:uppercase;
+  font-size:2.5rem;
+  font-weight:bold;
+  color:#fff;
+  padding-top:2rem;
 }
 
+/* Stats */
 .fit-home-figures{
-    display: flex;
-    gap: 1rem;
-    padding-top: 2rem;
+  display:flex;
+  gap:1rem;
+  padding-top:5rem;
 }
-
 .fit-home-figures>div{
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    color: white;
+  display:flex;
+  flex-direction:column;
+  gap:.5rem;
+  color:#fff;
 }
-
 .fit-home-figures>div>span:nth-of-type(1){
-    font-size: 2rem;
-    font-weight: bold;
+  font-size:2rem;
+  font-weight:bold;
 }
-
 .fit-home-figures>div>span:nth-of-type(2){
-    font-size: 1rem;
-    color: var(--gray);
-    text-transform: uppercase;
+  font-size:1rem;
+  color:var(--gray);
+  text-transform:uppercase;
 }
 
+/* Buttons row */
 .fit-home-buttons{
-    padding-top: 2rem;
-    display: flex;
-    gap: 1rem;
-    font-weight: normal;
+  padding-top:5rem;
+  display:flex;
+  gap:1rem;
+  font-weight:normal;
 }
-
-.fit-home-buttons>:nth-child(1){
-    background-color: var(--red);
-    color: white;
-    border-radius: 2rem;
-    padding: 0.8rem 2rem;
-    border: none;
-}
-
+.fit-home-buttons>:nth-child(1),
 .fit-home-buttons>:nth-child(2){
-    background-color: var(--red);
-    color: white;
-    border-radius: 2rem;
-    padding: 0.8rem 2rem;
-    border: none;
+  background-color:var(--red);
+  color:#fff;
+  border-radius:2rem;
+  padding:.8rem 2rem;
+  border:none;
 }
 
-html { scroll-behavior: smooth; }
+/* Join Now button on red panel */
+.fit-home-right .btn{
+  position:absolute;
+  right:3rem;
+  top:2rem;
+  color:#000;
+}
 
-/* Optional: spacing/background for the target block */
 .workouts-section {
-  padding: 80px 20px;
-  background: #f5f5f5;
+  width: 100%;
+  /* fallbacks: older → newer; last supported wins */
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
+
+  height: auto;
+  background:var(--appColor);
+  color: #fff;
+  padding: 64px 16px;
+  /* keep content visible above gesture bar / notch */
+  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+
+  overflow-x: hidden; /* avoid tiny horizontal spill that reveals white */
 }
 
+.fit-home-image{
+    position:absolute;
+    top: 10rem;
+    right: 6rem;
+    width: 18rem;
+}
+
+.fit-home-image-back{
+    position:absolute;
+    top: 5rem;
+    right: 14rem;
+    width: 15rem;
+    z-index:-1;
+}
+
+
+/* ----------------- Responsive ----------------- */
+@media (max-width: 992px){
+  .fit-home-tag{ font-size:2rem; line-height:1.2; }
+  .fit-home-content{ padding:14px 16px; border-radius:2rem; }
+}
+
+@media (max-width: 768px){
+  .fit-home-container{ flex-direction:column; }
+
+  .fit-home-left{ padding:1rem; }
+
+  /* Make the red area a top bar instead of full-height on phones
+     (if you want full height even on phones, delete min-height line) */
+  .fit-home-right{
+    order:-1;
+    min-height:56px;
+    height:auto;
+  }
+  .fit-home-right .btn{
+    position:static;
+    display:block;
+    margin:.75rem auto;
+  }
+
+  .fit-home-tag{
+    font-size:1.6rem;
+    text-align:left;
+  }
+
+  .fit-home-buttons{
+    padding-top:2rem;
+    flex-direction:column;
+    gap:.75rem;
+    width:100%;
+  }
+  .fit-home-buttons .btn{ width:100%; }
+}
+
+@media (max-width: 380px){
+  .fit-home-tag{ font-size:1.3rem; }
+}

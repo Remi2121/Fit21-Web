@@ -11,3 +11,13 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+:root{
+  --red:#b43b46;   /* theme red */
+  --gray:#c7c7c7;
+}
+
+*{ box-sizing:border-box; }
+html, body, #root, .App { height: 100%; }
+html { scroll-behavior: smooth; }
+
