@@ -1,18 +1,17 @@
-import React, { useRef, useState } from 'react';
+import React from 'react';
 import './fithome.css';
 import Headers from '../header/header.jsx';
 import Pages from '../../pages/pages.jsx';
+import hero_image from '../../assets/hero_image.png';
+import hero_image_back from '../../assets/hero_image_back.png';
 
 const Fithome = () => {
-  const workoutsRef = useRef(null);
-  const [showWorkouts, setShowWorkouts] = useState(false);
-
   const handleGetStarted = () => {
-    // make section visible first
-    setShowWorkouts(true);
-    setTimeout(() => {
-      workoutsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 200);
+    // Scroll smoothly to the bottom of the page
+    window.scrollTo({
+      top: document.body.scrollHeight,
+      behavior: 'smooth',
+    });
   };
 
   return (
@@ -45,26 +44,20 @@ const Fithome = () => {
           </div>
 
           <div className="fit-home-buttons">
-            <button className="btn" onClick={handleGetStarted}>
-              Get Started
-            </button>
+            <button className="btn" onClick={handleGetStarted}>Get Started</button>
             <button className="btn">Learn More</button>
           </div>
         </div>
 
-        <div className="fit-home-right"></div>
+        <div className="fit-home-right">
+          <button className="btn">Join Now</button>
+          <img src={hero_image} alt="Hero" className="fit-home-image" />
+          <img src={hero_image_back} alt="Hero background" className="fit-home-image-back" />
+        </div>
       </div>
 
-      {/* Workout section - only render after Get Started */}
-      {showWorkouts && (
-        <section
-          id="workouts"
-          ref={workoutsRef}
-          className="workouts-section fade-in"
-        >
-          <Pages />
-        </section>
-      )}
+      {/* Directly load Pages below */}
+      <Pages />
     </>
   );
 };

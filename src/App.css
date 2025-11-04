@@ -1,4 +1,9 @@
 /* make variables */
+
+html, body, #root {
+  height: 100%;
+}
+
 :root {
   --lightgray: #D9D9D9;
   --gray: #9c9c9c;
@@ -16,8 +21,6 @@
   background-color: var(--appColor);
   display: flex;
   flex-direction: column;
-  gap: 6rem;
-  overflow: hidden;
 }
 ::-webkit-scrollbar{
   display: none;

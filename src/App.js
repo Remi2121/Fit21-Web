@@ -9,10 +9,7 @@ function App() {
     <Router>
       <div className="App">
         <Routes>
-          {/* Home Page */}
           <Route path="/" element={<Fit />} />
-          
-          {/* New Pages Section */}
           <Route path="/pages" element={<Pages />} />
         </Routes>
       </div>
