@@ -1,28 +1,65 @@
-.header {
-    display: flex;
-    justify-content: space-between;
-
+:root{
+  --header-h: 80px;      /* desktop header height */
+  --menu-left-nudge: -2rem; /* fine-tune the menu a bit to the left */
 }
 
-.logo {
-width: 6rem;
-height: 5rem;
+@media (max-width: 768px){
+  :root{ --header-h: 64px; --menu-left-nudge: -1rem; }
 }
 
-.header-menu {
-    list-style: none;
-    display: flex;
-    gap: 2rem;
-   color: white;
+/* Fixed header bar */
+.header{
+  position: absolute;
+  top: 0; left: 0; width: 100%;
+  height: var(--header-h);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;     /* centers the menu block */
+  padding: 0 24px;
+  background: rgba(0,0,0,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.25);
+  backdrop-filter: saturate(140%) blur(6px);
 }
 
-.header-menu>li {
-    cursor: pointer;
-    
+/* Logo pinned left, doesn't affect menu centering */
+.logo{
+  position: absolute;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6rem;
+  height: 5rem;
+  object-fit: contain;
 }
 
-.header-menu>li:hover {
-    color:var(--red);
-    cursor: pointer;
-    transition: 0.3s;
+/* Centered menu (nudged slightly left) */
+.header-menu{
+  list-style: none;
+  display: flex;
+  gap: 3rem;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  left: var(--menu-left-nudge); /* move a bit to left */
 }
+
+.header-menu a{
+  text-decoration: none;
+  color: #fff;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: color .25s ease, transform .15s ease;
+}
+
+.header-menu a:hover,
+.header-menu a:focus{
+  color: var(--red);
+  outline: none;
+}
+
+.header-menu li:hover{
+  transform: translateY(-1px);
+}
+
+.header, .header *{ color: #fff; }

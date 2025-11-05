@@ -24,14 +24,15 @@ const Login = () => {
   };
 
   return (
-    <div className="login-box">
-      <form onSubmit={handleSubmit}>
+    <div className="login-box" id="login">
+      <form onSubmit={handleSubmit} className="login-popup-inputs">
         <input
           type="email"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          autoComplete="email"
         />
         <input
           type="password"
@@ -39,9 +40,10 @@ const Login = () => {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          autoComplete="current-password"
         />
         <button type="submit">{isRegister ? "Sign Up" : "Login"}</button>
-        <p onClick={() => setIsRegister(!isRegister)} className="toggle-link">
+        <p onClick={() => setIsRegister(!isRegister)} className="toggle-link click">
           {isRegister ? "Already have an account? Login" : "New user? Register here"}
         </p>
       </form>
