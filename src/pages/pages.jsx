@@ -33,9 +33,8 @@ const Pages = () => {
     <div className="pages-container">
 
         <h1 className="stoke-text">Choose Your Workout</h1>
-        
-
-        <div className="circle-container">
+  
+        <div className="workout-container">
           <button
             className={`circle ${selected === 'pushup' ? 'active' : ''}`}
             onClick={() => openSection('pushup')}

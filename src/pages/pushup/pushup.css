@@ -1,20 +1,19 @@
-.pushup-container{
-  width: 100%;
-  max-width: 900px;              
-  margin: 0 auto;                
-  padding: 1rem 1rem;
+.pushup-container {
+  width: 100vw;                               
   display: flex;
   flex-direction: column;
+  background-color: rgb(126, 126, 119);
   align-items: flex-start;
   justify-content: flex-start;
-  background-color:transparent;        
-  color: #fff;
-  border-radius: 14px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-  min-height: 60dvh;            
-  height: auto;                  
+  color: #fff;        
+  box-shadow: none;          
+  min-height: 60dvh;
+  height: auto;
   box-sizing: border-box;
+  padding-top: 1rem;    
+  padding-left: 3rem;         
 }
+
 
 .pushup-container h3{
   font-size: 1.8rem;
