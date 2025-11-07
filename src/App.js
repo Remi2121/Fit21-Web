@@ -1,20 +1,25 @@
-
 import React from "react";
 import "./App.css";
-import { Routes, Route, Navigate, Link } from "react-router-dom";
-
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Home from "./Home.jsx";
 import Pages from "./pages/pages.jsx";
 import ScrollToHash from "./components/common/ScrollToTop.jsx";
+
+import Leaderboard from "./Leaderboard/Leaderboard.jsx";  
+import Admin from "./Admin/AdminDashboard.jsx";
+
 
 function App() {
   return (
     <div className="App">
       <Router>
-        <ScrollToHash />   {/* 👈 hash change-க்கு scroll */}
+        <ScrollToHash />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/pages" element={<Pages />} />
+          <Route path="/admin" element={<Admin />} /> 
+
+          <Route path="/leaderboard" element={<Leaderboard />} /> 
           <Route path="/contact" element={<Navigate to="/#contact" replace />} />
           <Route path="/login" element={<Navigate to="/#login" replace />} />
         </Routes>

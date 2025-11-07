@@ -104,11 +104,45 @@
 
 .fit-home-right .btn{
   position:absolute;
+  right:10rem;
+  top:1.5rem;
+  color:#000;
+  z-index: 1000;
+  font-weight: bold;
+}
+
+.ad-btn{
+  position:absolute;
   right:3rem;
   top:1.5rem;
   color:#000;
   z-index: 1000;
+  background-color: white;
+  padding: 0.5rem;
+  border: 4px solid transparent;
+  transition: 300ms all;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 10rem;
+  width: 6rem;
+  height: 2.1rem;
+  font-weight: bold;
 }
+.ad-btn a {
+  color: inherit;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.ad-btn a:hover {
+  text-decoration: none;
+}
+.ad-btn:hover{
+  cursor: pointer;
+  background-color: rgb(211, 165, 165);
+}
+
 
 .workouts-section {
   width: 100%;
@@ -159,6 +193,37 @@
     filter: blur(200px);
     z-index: -9;
  }
+
+ /* popup base (reuse your login-popup style if you want) */
+.admin-popup {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.6);
+  display: none; align-items: center; justify-content: center;
+  z-index: 2000;
+}
+.admin-popup.show { display: flex; }
+
+.admin-popup-container{
+  width: min(520px, 92vw);
+  background: #1e1f22;
+  color: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.4);
+}
+.admin-popup-title{
+  display:flex; align-items:center; justify-content:space-between;
+  font-weight:700; font-size:1.1rem; margin-bottom:12px;
+}
+
+.admin-section{ margin-top: 18px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.12); }
+.admin-form{ display:flex; gap:10px; flex-direction:column; margin-top:8px; }
+.admin-form input{
+  padding: .7rem .9rem; border-radius: 10px; border: 1px solid #444; background:#111; color:#fff;
+}
+.admin-go{ margin-top: 10px; display:flex; gap:12px; align-items:center; }
+.note{ margin: 8px 0 0; font-size:.9rem; opacity:.9; }
+.warn{ margin: 8px 0 0; color:#ffb4b4; font-size:.9rem; }
 
 
 /* ----------------- Responsive ----------------- */
