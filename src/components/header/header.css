@@ -28,8 +28,8 @@
   left: 24px;
   top: 50%;
   transform: translateY(-50%);
-  width: 6rem;
-  height: 5rem;
+  width: 10rem;
+  height: 13rem;
   object-fit: contain;
 }
 
@@ -63,3 +63,95 @@
 }
 
 .header, .header *{ color: #fff; }
+
+/* Popup shell (hidden by default) */
+.contact-popup{
+  position: fixed;
+  inset: 0;
+  display: none;                 /* toggled by .show */
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.45);
+  z-index: 2000;                 /* above header */
+  padding: 16px;                 /* mobile safe */
+}
+.contact-popup.show{ display: flex; }
+
+/* Panel */
+.contact-popup-container{
+  width: min(720px, 100%);
+  background: #111;
+  color: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  padding: 20px 20px 24px;
+  overflow: hidden;              /* no x-scroll */
+  animation: contactPop 180ms ease-out;
+}
+
+/* Title row */
+.contact-popup-title{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+.contact-popup-title img{
+  width: 28px; height: 28px;
+  cursor: pointer;
+  filter: invert(1);
+}
+
+.contact-popup-sub{
+  margin: 0 0 8px;
+  color: #ddd;
+  font-size: 0.95rem;
+}
+.contact-popup-info{
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 0.92rem;
+  color: #eaeaea;
+}
+
+/* Form */
+.contact-form--popup{
+  display: grid;
+  gap: 12px;
+}
+.contact-form--popup input,
+.contact-form--popup textarea{
+  width: 100%;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: #fff;
+  border-radius: 10px;
+  padding: 12px 14px;
+  outline: none;
+}
+.contact-form--popup input:focus,
+.contact-form--popup textarea:focus{
+  border-color: var(--red, #bd3951);
+}
+.btn-contact-btn{
+  padding: 12px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--red, #bd3951);
+  color: #fff;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+/* Anim */
+@keyframes contactPop {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
