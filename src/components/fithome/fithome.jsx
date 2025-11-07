@@ -19,19 +19,12 @@ const Fithome = () => {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const handleGetStarted = () => {
-    const el = pagesRef.current;
-    if (!el) return;
-    const header = document.querySelector(".header");
-    const headerH = header ? header.offsetHeight : 0;
-    const y = el.getBoundingClientRect().top + window.pageYOffset - headerH;
-    window.scrollTo({ top: y, behavior: "smooth" });
-  };
+
 
   return (
     <>
       <div className="fit-home-container" id="home">
-        <div className="blur blur-f"></div>
+        <div className="fit-home-blur-f"></div>
 
         <div className="fit-home-left">
           <Headers />
@@ -64,7 +57,7 @@ const Fithome = () => {
           </div>
 
           <div className="fit-home-buttons">
-            <button className="btn" onClick={handleGetStarted}>Get Started</button>
+
             <button className="btn">Learn More</button>
           </div>
         </div>

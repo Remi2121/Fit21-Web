@@ -2,7 +2,9 @@
 .fit-home-container{
   display:flex;
   justify-content:space-between;
-  min-height:100svh;            /* mobile-safe fullscreen */
+  min-height:100svh; 
+  position: relative;     /* anchor absolutely-positioned children */
+  isolation: isolate;            /* mobile-safe fullscreen */
 }
 
 /* Left */
@@ -132,9 +134,9 @@
 
 .fit-home-image{
     position:absolute;
-    top: 12rem;
-    right: 5rem;
-    width: 18rem;
+    top: 8rem;
+    right: 1rem;
+    width: 35rem;
 }
 
 .fit-home-image-back{
@@ -145,12 +147,17 @@
     z-index:-1;
 }
 
- .blur-f{
+ .fit-home-blur-f{
   display: block !important;
   width: 20rem;
   height: 30rem;
   left: 0;
   top: 1rem;
+    background: rgba(201, 33, 128, 0.97);
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(200px);
+    z-index: -9;
  }
 
 
