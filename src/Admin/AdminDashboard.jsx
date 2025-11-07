@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import "./AdminDashboard.css";
 
 export default function AdminDashboard() {
-  // ===== STATE =====
+ 
   const [committee, setCommittee] = useState([
     {
       id: 1,
