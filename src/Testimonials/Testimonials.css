@@ -17,7 +17,7 @@
   color: #fff;
 }
 
-.left-t > :nth-child(1){ color: var(--red); font-weight: 700; }
+.left-t > :nth-child(1){ color: var(--red); font-weight: bold;background: white;width: 6rem;height: 2rem;text-align: center;padding-top: 0.5rem;  }
 .left-t > :nth-child(2),
 .left-t > :nth-child(3){ font-size: 3rem; font-weight: 800; }
 .left-t > :nth-child(4){

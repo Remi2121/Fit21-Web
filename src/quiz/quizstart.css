@@ -1,0 +1,184 @@
+/* ===== Base & full-page gradient (fill to bottom) ===== */
+:root {
+  --text: #ffffff;
+  --muted: #a1a1aa;
+  --card: rgba(255,255,255,0.05);
+  --card-border: rgba(255,255,255,0.12);
+  --accent1: #34d399; /* emerald */
+  --accent2: #22d3ee; /* cyan */
+}
+
+
+
+/* Keep the rest of your styles; just add/replace these */
+
+.quiz-root {
+  position: relative;
+  min-height: 100vh;          /* page covers full viewport */
+  color: #fff;
+  isolation: isolate;         /* ensures the ::before sits behind */
+}
+
+/* ✅ Gradient only while this component is mounted */
+.quiz-root::before {
+  content: "";
+  position: fixed;            /* stick to viewport while scrolling */
+  inset: 0;                   /* top:0; right:0; bottom:0; left:0 */
+  z-index: -1;                /* behind your content */
+  background:
+    radial-gradient(circle at 30% 10%, rgba(255,0,0,0.22), transparent 65%),
+    linear-gradient(180deg, #000 0%, #330000 45%, #b30000 100%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
+  pointer-events: none;       /* no accidental interactions */
+}
+
+
+
+/* ===== Top bar ===== */
+.quiz-topbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  backdrop-filter: blur(8px);
+  background: rgba(11,11,12,0.75);
+  border-bottom: 1px solid var(--card-border);
+}
+.quiz-title { font-weight: 800; font-size: 2.2rem; letter-spacing: .2px; }
+.quiz-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+.pill {
+  font-size: 12px; color: var(--text);
+  padding: 6px 10px; border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--card-border);
+}
+.pill-muted { color: var(--muted); }
+
+/* ===== Progress ===== */
+.quiz-progress-wrap { max-width: 980px; margin: 12px auto 0; padding: 0 16px 8px; }
+.quiz-progress {
+  height: 10px; width: 100%; border-radius: 999px; overflow: hidden;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid var(--card-border);
+}
+.quiz-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent1), var(--accent2));
+  transition: width 300ms ease;
+}
+.quiz-progress-text {
+  text-align: right; font-size: 12px; color: var(--muted); margin-top: 6px;
+}
+
+/* ===== Main & cards ===== */
+.quiz-main { max-width: 980px; margin: 0 auto; padding: 16px; }
+
+.question-card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  margin-bottom: 14px;
+}
+
+.q-head { display: flex; align-items: start; gap: 12px; }
+.q-index {
+  flex: 0 0 auto;
+  height: 28px; width: 28px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(52,211,153,0.15);
+  border: 1px solid rgba(52,211,153,0.35);
+  color: #ccfbe5; font-weight: 700;
+}
+.q-text { margin: 0; font-size: 16px; line-height: 1.4; }
+
+/* ===== Options ===== */
+.q-options { margin-top: 12px; display: grid; gap: 8px; }
+
+.option {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--card-border);
+  cursor: pointer; user-select: none;
+  transition: background 220ms ease, border-color 220ms ease, transform 80ms ease;
+}
+.option:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.25); }
+.option:active { transform: scale(0.995); }
+
+.option input { appearance: none; width: 0; height: 0; margin: 0; }
+.option-dot {
+  height: 18px; width: 18px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.5);
+  display: grid; place-items: center;
+}
+
+/* Before submit: selected option style */
+.option-checked .option-dot { border-color: var(--accent1); background: rgba(52,211,153,0.2); }
+.option-checked .option-text { color: #eafff6; }
+
+/* After submit: correct/wrong styles */
+.option-correct {
+  border-color: rgba(34,197,94,.6) !important;
+  background: rgba(34,197,94,.12) !important;
+}
+.option-wrong {
+  border-color: rgba(239,68,68,.55) !important;
+  background: rgba(239,68,68,.10) !important;
+}
+
+.q-feedback { margin-top: 8px; font-size: 13px; }
+.q-feedback .ok  { color: #22c55e; }
+.q-feedback .bad { color: #ef4444; }
+
+/* ===== Submit bar ===== */
+.submit-bar {
+  position: sticky; bottom: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 12px 16px;
+  background: rgba(11,11,12,0.85);
+  border-top: 1px solid var(--card-border);
+  backdrop-filter: blur(8px);
+}
+.submit-meta { font-size: 13px; color: var(--muted); }
+
+.submit-btn {
+  border: 0; outline: 0; cursor: pointer;
+  padding: 10px 16px; border-radius: 12px;
+  color: #0b0b0c; font-weight: 700;
+  background: linear-gradient(90deg, var(--accent1), var(--accent2));
+  box-shadow: 0 10px 20px rgba(0,0,0,0.35);
+}
+.submit-btn:active { transform: translateY(1px); }
+
+.submit-actions{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.home-btn{
+  text-decoration:none;
+  border:1px solid rgba(255,255,255,0.25);
+  padding:10px 14px;
+  border-radius:12px;
+  color:#fff;
+  font-weight:700;
+  background: transparent;
+  transition: background .2s ease, transform .1s ease, border-color .2s ease;
+}
+.home-btn:hover{
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.4);
+}
+.home-btn:active{ transform: translateY(1px); }
+
+.spacer { height: 80px; }
+
+/* ===== Responsive ===== */
+@media (min-width: 800px) {
+  .q-text { font-size: 18px; }
+  .option { padding: 14px 16px; }
+}
