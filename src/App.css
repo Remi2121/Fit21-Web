@@ -23,8 +23,8 @@ html, body, #root {
   mix-blend-mode: overlay;
   display: flex;
   flex-direction: column;
-  overflow-x: hidden;
   background-color: var(--appColor);
+  overflow-x: hidden;
 
 }
 ::-webkit-scrollbar{
