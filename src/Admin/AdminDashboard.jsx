@@ -1,9 +1,34 @@
-// src/pages/AdminDashboard.jsx
+// src/Admin/AdminDashboard.jsx
 import React, { useState, useEffect } from "react";
+import { testFirebase } from "./services/testFirebase";
 import "./AdminDashboard.css";
 
+import CommitteeSection from "./components/CommitteeSection.jsx";
+import QuizSection from "./components/QuizSection.jsx";
+import AnnouncementSection from "./components/AnnouncementSection.jsx";
+import LeaderboardSection from "./components/LeaderboardSection.jsx";
+import Card from "./components/Card.jsx";
+
+
+
 export default function AdminDashboard() {
- 
+  // ===== STATE =====
+
+useEffect(() => {
+    // page load aana udane oru dhadava test pannum
+    async function runTest() {
+      try {
+        const count = await testFirebase();
+        console.log(
+          `✅ Firebase OK! debug_tests collection-la total docs: ${count}`
+        );
+      } catch (err) {
+        console.error("❌ Firebase test FAILED:", err);
+      }
+    }
+
+    runTest();
+  }, []); // empty dependency -> once on mount
   const [committee, setCommittee] = useState([
     {
       id: 1,
@@ -91,20 +116,19 @@ export default function AdminDashboard() {
   const [editingAnnouncementId, setEditingAnnouncementId] =
     useState(null);
 
-  // Leaderboard data
-  // 👇 initial rank null – auto rank only when currentDay === 21
+  // Leaderboard data – start with no rank (auto rank only when day 21)
   const [leaderboard, setLeaderboard] = useState([
     { id: 1, rank: null, name: "User A", daysCompleted: 15, points: 150 },
     { id: 2, rank: null, name: "User B", daysCompleted: 12, points: 120 },
     { id: 3, rank: null, name: "User C", daysCompleted: 10, points: 100 },
   ]);
 
-  // 👇 challenge-la ippo varaikkum evlo day mudinchu nu admin set panna
-  const [currentDay, setCurrentDay] = useState(0); // 0–21
+  // challenge current day (0–21) – admin updates this
+  const [currentDay, setCurrentDay] = useState(0);
 
   const [activeTab, setActiveTab] = useState("dashboard");
 
-  // Timer – every 1 second re-render for countdown
+  // Timer – every 1 second re-render for quiz countdown
   const [timerTick, setTimerTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => {
@@ -373,16 +397,7 @@ export default function AdminDashboard() {
   );
 }
 
-/* ========== REUSABLE COMPONENTS ========== */
-
-function Card({ title, children }) {
-  return (
-    <div className="card">
-      <h3 className="card-title">{title}</h3>
-      {children}
-    </div>
-  );
-}
+/* ========== DASHBOARD OVERVIEW ========== */
 
 function DashboardOverview({ committee, quizList, announcements, leaderboard }) {
   return (
@@ -420,548 +435,6 @@ function StatCard({ label, value, note }) {
       <div className="stat-label">{label}</div>
       <div className="stat-value">{value}</div>
       <div className="stat-note">{note}</div>
-    </div>
-  );
-}
-
-function CommitteeSection({
-  committee,
-  selectedMember,
-  setSelectedMember,
-  setCommittee,
-}) {
-  const [editData, setEditData] = useState(selectedMember || null);
-
-  useEffect(() => {
-    setEditData(selectedMember);
-  }, [selectedMember]);
-
-  const handleChange = (field, value) => {
-    setEditData({ ...editData, [field]: value });
-  };
-
-  const handleSave = () => {
-    if (!editData) return;
-    setCommittee(
-      committee.map((m) => (m.id === editData.id ? editData : m))
-    );
-    setSelectedMember(null);
-  };
-
-  return (
-    <div>
-      <h1 className="page-title">Organizing Team</h1>
-      <Card title="Committee Members">
-        <div className="committee-grid">
-          {committee.map((member) => (
-            <div
-              key={member.id}
-              className={`committee-card ${
-                selectedMember && selectedMember.id === member.id
-                  ? "selected"
-                  : ""
-              }`}
-              onClick={() => setSelectedMember(member)}
-            >
-              <img
-                src={member.photoUrl}
-                alt={member.name}
-                className="committee-avatar"
-              />
-              <div className="committee-name">{member.name}</div>
-              <div className="committee-role">{member.role}</div>
-              <div className="committee-line">📞 {member.phone}</div>
-              <div className="committee-line">✉️ {member.email}</div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {selectedMember && editData && (
-        <Card title="Edit Member Details">
-          <div className="edit-avatar-wrapper">
-      <div className="edit-avatar-circle">
-        {editData.photoUrl && (
-          <img src={editData.photoUrl} alt={editData.name} />
-        )}
-         </div>
-            <Input
-              label="Name"
-              value={editData.name}
-              onChange={(e) => handleChange("name", e.target.value)}
-            />
-            <Input
-              label="Role"
-              value={editData.role}
-              onChange={(e) => handleChange("role", e.target.value)}
-            />
-            <Input
-              label="Phone"
-              value={editData.phone}
-              onChange={(e) => handleChange("phone", e.target.value)}
-            />
-            <Input
-              label="Email"
-              value={editData.email}
-              onChange={(e) => handleChange("email", e.target.value)}
-            />
-            <div className="input-wrapper">
-              <label className="input-label">Upload Photo</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                      handleChange("photoUrl", reader.result);
-                    };
-                    reader.readAsDataURL(file);
-                  }
-                }}
-                className="input-control file-input"
-              />
-             <div className="input-wrapper">
-  
-  
-</div>
-
-            </div>
-          </div>
-          <button className="btn btn-primary" onClick={handleSave}>
-            Save Changes
-          </button>
-        </Card>
-      )}
-    </div>
-  );
-}
-
-function QuizSection({
-  quizList,
-  newQuiz,
-  setNewQuiz,
-  onSubmit,
-  publishQuiz,
-  timerTick, // just for rerender
-  onEditQuiz,
-  onDeleteQuiz,
-  isEditing,
-}) {
-  return (
-    <div>
-      <h1 className="page-title">Quiz Management (21 Days)</h1>
-      <Card title={isEditing ? "Edit Quiz" : "Create / Update Quiz"}>
-        <form onSubmit={onSubmit}>
-          <div className="form-grid">
-            <Input
-              label="Day (1 - 21)"
-              type="number"
-              value={newQuiz.day}
-              onChange={(e) =>
-                setNewQuiz({ ...newQuiz, day: e.target.value })
-              }
-            />
-            <Input
-              label="Question"
-              value={newQuiz.question}
-              onChange={(e) =>
-                setNewQuiz({ ...newQuiz, question: e.target.value })
-              }
-            />
-            <Input
-              label="Option A"
-              value={newQuiz.optionA}
-              onChange={(e) =>
-                setNewQuiz({ ...newQuiz, optionA: e.target.value })
-              }
-            />
-            <Input
-              label="Option B"
-              value={newQuiz.optionB}
-              onChange={(e) =>
-                setNewQuiz({ ...newQuiz, optionB: e.target.value })
-              }
-            />
-            <Input
-              label="Option C"
-              value={newQuiz.optionC}
-              onChange={(e) =>
-                setNewQuiz({ ...newQuiz, optionC: e.target.value })
-              }
-            />
-            <Input
-              label="Option D"
-              value={newQuiz.optionD}
-              onChange={(e) =>
-                setNewQuiz({ ...newQuiz, optionD: e.target.value })
-              }
-            />
-            <div className="input-wrapper">
-              <label className="input-label">Correct Answer</label>
-              <select
-                value={newQuiz.correct}
-                onChange={(e) =>
-                  setNewQuiz({ ...newQuiz, correct: e.target.value })
-                }
-                className="input-control"
-              >
-                <option value="A">Option A</option>
-                <option value="B">Option B</option>
-                <option value="C">Option C</option>
-                <option value="D">Option D</option>
-              </select>
-            </div>
-          </div>
-          <button type="submit" className="btn btn-success">
-            {isEditing ? "Update Quiz" : "Save Quiz"}
-          </button>
-        </form>
-      </Card>
-
-      <Card title="Quiz List">
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Day</th>
-              <th>Question</th>
-              <th>Published</th>
-              <th>Time left</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {quizList.map((q) => {
-              let remaining = null;
-              if (q.published && q.expiresAt) {
-                const diff = q.expiresAt - Date.now();
-                remaining = diff > 0 ? Math.ceil(diff / 1000) : 0;
-              }
-
-              return (
-                <tr key={q.id}>
-                  <td>{q.day}</td>
-                  <td>
-                    <strong>Day {q.day} quiz:</strong> {q.question}
-                  </td>
-                  <td>{q.published ? "Yes" : "No"}</td>
-                  <td>
-                    {q.published && remaining !== null
-                      ? `${remaining}s`
-                      : "-"}
-                  </td>
-                  <td>
-                    <button
-                      onClick={() => publishQuiz(q.id)}
-                      className={`btn btn-small ${
-                        q.published ? "btn-warning" : "btn-success"
-                      }`}
-                    >
-                      {q.published ? "Unpublish" : "Publish"}
-                    </button>
-                    <button
-                      onClick={() => onEditQuiz(q)}
-                      className="btn btn-small btn-outline"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => onDeleteQuiz(q.id)}
-                      className="btn btn-small btn-danger"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </Card>
-    </div>
-  );
-}
-
-function AnnouncementSection({
-  announcements,
-  newAnnouncement,
-  setNewAnnouncement,
-  onSubmit,
-  onEdit,
-  onDelete,
-  isEditing,
-}) {
-  return (
-    <div>
-      <h1 className="page-title">21 Days Announcements</h1>
-
-      <Card title={isEditing ? "Edit Announcement" : "Create Announcement"}>
-        <form onSubmit={onSubmit}>
-          <div className="form-grid">
-            <Input
-              label="Day (1 - 21)"
-              type="number"
-              value={newAnnouncement.day}
-              onChange={(e) =>
-                setNewAnnouncement({
-                  ...newAnnouncement,
-                  day: e.target.value,
-                })
-              }
-            />
-            <Input
-              label="Title"
-              value={newAnnouncement.title}
-              onChange={(e) =>
-                setNewAnnouncement({
-                  ...newAnnouncement,
-                  title: e.target.value,
-                })
-              }
-            />
-          </div>
-          <div className="input-wrapper mt-10">
-            <label className="input-label">Message</label>
-            <textarea
-              value={newAnnouncement.message}
-              onChange={(e) =>
-                setNewAnnouncement({
-                  ...newAnnouncement,
-                  message: e.target.value,
-                })
-              }
-              rows={3}
-              className="input-control textarea"
-            />
-          </div>
-          <button type="submit" className="btn btn-primary mt-10">
-            {isEditing ? "Update Announcement" : "Save Announcement"}
-          </button>
-        </form>
-      </Card>
-
-      <Card title="Announcements List">
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Day</th>
-              <th>Title</th>
-              <th>Message</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {announcements.map((a) => (
-              <tr key={a.id}>
-                <td>{a.day}</td>
-                <td>{a.title}</td>
-                <td>{a.message}</td>
-                <td>
-                  <button
-                    onClick={() => onEdit(a)}
-                    className="btn btn-small btn-outline"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => onDelete(a.id)}
-                    className="btn btn-small btn-danger"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
-    </div>
-  );
-}
-
-/* ===== LEADERBOARD ===== */
-
-function LeaderboardSection({
-  leaderboard,
-  setLeaderboard,
-  currentDay,
-  setCurrentDay,
-}) {
-  const [editData, setEditData] = useState(null);
-
-  // points-based rank + 17 days rule + only after day 21
-  const recomputeRanks = (list, totalDays) => {
-    // challenge innum mudiyala – rank assign pannadhe
-    if (totalDays < 21) {
-      return list.map((u) => ({ ...u, rank: null }));
-    }
-
-    const sorted = [...list].sort((a, b) => b.points - a.points);
-    let runningRank = 1;
-
-    return sorted.map((user) => {
-      if (user.daysCompleted >= 17) {
-        const rankedUser = { ...user, rank: runningRank };
-        runningRank += 1;
-        return rankedUser;
-      } else {
-        return { ...user, rank: null }; // disqualified – no rank
-      }
-    });
-  };
-
-  const handleCurrentDayChange = (value) => {
-    const num = Number(value) || 0;
-    const clamped = Math.max(0, Math.min(21, num)); // 0–21 range
-    setCurrentDay(clamped);
-
-    const ranked = recomputeRanks(leaderboard, clamped);
-    setLeaderboard(ranked);
-  };
-
-  const startEdit = (user) => {
-    setEditData({
-      id: user.id,
-      name: user.name,
-      daysCompleted: String(user.daysCompleted),
-      points: String(user.points),
-    });
-  };
-
-  const handleChange = (field, value) => {
-    setEditData({ ...editData, [field]: value });
-  };
-
-  const saveEdit = () => {
-    if (!editData) return;
-
-    const updated = leaderboard.map((u) =>
-      u.id === editData.id
-        ? {
-            ...u,
-            name: editData.name,
-            daysCompleted: Number(editData.daysCompleted),
-            points: Number(editData.points),
-          }
-        : u
-    );
-
-    const ranked = recomputeRanks(updated, currentDay);
-    setLeaderboard(ranked);
-    setEditData(null);
-  };
-
-  return (
-    <div>
-      <h1 className="page-title">Points &amp; Leaderboard</h1>
-      <Card title="Users Progress (21 Days)">
-        {/* top info: current challenge day */}
-        <div className="leaderboard-top">
-          <div className="leaderboard-current">
-            Challenge Progress:&nbsp;
-            <strong>
-              Day {currentDay} / 21
-            </strong>
-          </div>
-
-          <div className="form-inline">
-            <label className="input-label">Current Day (0 - 21)</label>
-            <input
-              type="number"
-              min="0"
-              max="21"
-              value={currentDay}
-              onChange={(e) => handleCurrentDayChange(e.target.value)}
-              className="input-control"
-              style={{ width: "90px" }}
-            />
-          </div>
-        </div>
-
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Rank</th>
-              <th>User</th>
-              <th>Days Completed</th>
-              <th>Points</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {leaderboard.map((user) => (
-              <tr key={user.id}>
-                {/* currentDay < 21 or not enough days -> '-' */}
-                <td>{user.rank != null ? user.rank : "-"}</td>
-                <td>{user.name}</td>
-                <td>
-                  {user.daysCompleted} / {currentDay}
-                </td>
-                <td>{user.points}</td>
-                <td>
-                  <button
-                    onClick={() => startEdit(user)}
-                    className="btn btn-small btn-outline"
-                  >
-                    Edit
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {editData && (
-          <div className="leaderboard-edit">
-            <h4 className="leaderboard-edit-title">Edit User Points</h4>
-            <div className="form-grid">
-              <Input
-                label="User Name"
-                value={editData.name}
-                onChange={(e) => handleChange("name", e.target.value)}
-              />
-              <Input
-                label="Days Completed"
-                type="number"
-                value={editData.daysCompleted}
-                onChange={(e) =>
-                  handleChange("daysCompleted", e.target.value)
-                }
-              />
-              <Input
-                label="Points"
-                type="number"
-                value={editData.points}
-                onChange={(e) => handleChange("points", e.target.value)}
-              />
-            </div>
-            <button
-              onClick={saveEdit}
-              className="btn btn-primary mt-10 mr-8"
-            >
-              Save Changes
-            </button>
-            <button
-              onClick={() => setEditData(null)}
-              className="btn btn-outline mt-10"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-      </Card>
-    </div>
-  );
-}
-
-/* === generic input === */
-
-function Input({ label, type = "text", ...props }) {
-  return (
-    <div className="input-wrapper">
-      <label className="input-label">{label}</label>
-      <input type={type} className="input-control" {...props} />
     </div>
   );
 }

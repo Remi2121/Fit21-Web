@@ -370,3 +370,12 @@
   height: 100%;
   object-fit: cover;
 }
+
+.quiz-save-btn {
+  margin-top: 14px;      
+}
+
+
+.admin-table td .btn-small {
+  margin-right: 8px;
+}
