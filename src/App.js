@@ -4,9 +4,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Home from "./Home.jsx";
 import Pages from "./pages/pages.jsx";
 import ScrollToHash from "./components/common/ScrollToTop.jsx";
-import Quiz from "./quiz/QuizStart.jsx";
+import Quiz from "./Exercise/quiz/QuizStart.jsx";
 import Leaderboard from "./Leaderboard/Leaderboard.jsx";  
 import Admin from "./Admin/AdminDashboard.jsx";
+import Exercise from "./Exercise/exercise.jsx"
 
 
 function App() {
@@ -18,6 +19,8 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/pages" element={<Pages />} />
           <Route path="/admin" element={<Admin />} /> 
+          <Route path="/exercise" element={<Exercise />} />
+          
           <Route path="/quizstart" element={<Quiz />} /> 
           <Route path="/leaderboard" element={<Leaderboard />} /> 
           <Route path="/contact" element={<Navigate to="/#contact" replace />} />
