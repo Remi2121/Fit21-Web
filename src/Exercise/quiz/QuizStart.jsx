@@ -2,15 +2,18 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import "./quizstart.css";
-import { db } from "../firebase";
+import { db } from "../../firebase";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import {
   collection,
   query,
   where,
   getDocs,
-  addDoc,
   serverTimestamp,
+  // NEW:
+  doc,
+  getDoc,
+  setDoc,
 } from "firebase/firestore";
 
 /* Map Firestore letter to index */
@@ -18,10 +21,10 @@ const letterToIndex = (L) =>
   ({ A: 0, B: 1, C: 2, D: 3 }[(L || "").toUpperCase()] ?? null);
 
 /* Convert Firestore doc -> local question shape */
-function docToQuestion(doc) {
-  const d = doc.data();
+function docToQuestion(docu) {
+  const d = docu.data();
   return {
-    id: d.id || doc.id,
+    id: d.id || docu.id,
     text: d.question || "",
     options: [d.optionA, d.optionB, d.optionC, d.optionD].map((x) => x ?? ""),
     correctIndex: letterToIndex(d.correctOption),
@@ -39,6 +42,9 @@ const fmt = (s) => {
   return `${m}:${ss}`;
 };
 
+/* YYYY-MM-DD for "one attempt per day" */
+const getDayKey = () => new Date().toISOString().slice(0, 10);
+
 export default function QuizStart() {
   // --- Auth state ---
   const [authReady, setAuthReady] = useState(false);
@@ -51,6 +57,10 @@ export default function QuizStart() {
   const [submitted, setSubmitted] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const [score, setScore] = useState(0);
+
+  // --- One-per-day lock ---
+  const [alreadyDone, setAlreadyDone] = useState(false);
+  const [prevResult, setPrevResult] = useState(null);
 
   // --- Time limit ---
   const [timeLimitSec, setTimeLimitSec] = useState(10 * 60); // default 10 mins
@@ -67,16 +77,31 @@ export default function QuizStart() {
     return () => unsub();
   }, []);
 
-  // Fetch settings + questions after auth
+  // Fetch: (A) check existing attempt, (B) settings, (C) questions
   useEffect(() => {
     if (!authReady) return;
     if (!user) {
       setLoading(false);
       return;
     }
+
     (async () => {
       try {
-        // 1) optional quizSettings: take first doc's timeLimitMinutes
+        // ---- A) Has user already finished today? ----
+        const dayKey = getDayKey();
+        const answerDocId = `${user.uid}_${dayKey}`;
+        const ansRef = doc(db, "quizAnswers", answerDocId);
+        const ansSnap = await getDoc(ansRef);
+
+        if (ansSnap.exists()) {
+          setAlreadyDone(true);
+          setSubmitted(true);
+          setPrevResult(ansSnap.data());
+          setLoading(false);
+          return; // stop here; do not load questions/timer
+        }
+
+        // ---- B) Admin time limit (optional) ----
         try {
           const sSnap = await getDocs(collection(db, "quizSettings"));
           if (!sSnap.empty) {
@@ -91,28 +116,29 @@ export default function QuizStart() {
           console.warn("quizSettings load failed; using default 10 mins.", e);
         }
 
-        // 2) questions
+        // ---- C) Load questions ----
         const qy = query(
           collection(db, "quizQuestions"),
           where("published", "==", true)
         );
         const snap = await getDocs(qy);
         const items = [];
-        snap.forEach((doc) => items.push(docToQuestion(doc)));
+        snap.forEach((docu) => items.push(docToQuestion(docu)));
         setQuestions(items);
       } catch (err) {
-        console.error("Load quizQuestions failed:", err.code, err.message);
-        alert(`Couldn't load quiz questions. Check Firestore rules/connection.`);
+        console.error("Load quiz failed:", err.code, err.message);
+        alert(`Couldn't load quiz. Check Firestore rules/connection.`);
       } finally {
         setLoading(false);
       }
     })();
-  }, [authReady, user, db]);
+  }, [authReady, user]);
 
   // Start / run countdown
   useEffect(() => {
     if (loading) return;
     if (submitted) return;
+    if (alreadyDone) return;
     if (questions.length === 0) return;
 
     // initialize if needed
@@ -130,8 +156,7 @@ export default function QuizStart() {
     }, 1000);
 
     return () => clearInterval(timerRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, submitted, questions.length, timeLimitSec]);
+  }, [loading, submitted, alreadyDone, questions.length, timeLimitSec]);
 
   const total = questions.length;
 
@@ -147,7 +172,7 @@ export default function QuizStart() {
   );
 
   const handlePick = (qid, idx) => {
-    if (submitted || timedOut || timeLeftSec <= 0) return; // locked
+    if (submitted || timedOut || timeLeftSec <= 0 || alreadyDone) return; // locked
     setAnswers((prev) => ({ ...prev, [qid]: idx }));
   };
 
@@ -177,18 +202,31 @@ export default function QuizStart() {
     return { ok, percentage, details };
   };
 
+  // Save with fixed doc id (one-per-day)
   const persistResult = async ({ ok, percentage, details }, extra = {}) => {
     try {
-      await addDoc(collection(db, "quizAnswers"), {
-        title: "Fitness Basics Quiz",
-        createdAt: serverTimestamp(),
-        userId: user?.uid || null,
-        total,
-        correct: ok,
-        percentage,
-        answers: details,
-        ...extra, // timedOut:true etc.
-      });
+      const dayKey = getDayKey();
+      const answerDocId = `${user?.uid || "anon"}_${dayKey}`;
+      await setDoc(
+        doc(db, "quizAnswers", answerDocId),
+        {
+          title: "Fitness Basics Quiz",
+          createdAt: serverTimestamp(),
+          finishedAt: serverTimestamp(),
+          userId: user?.uid || null,
+          dayKey,
+          total,
+          correct: ok,
+          percentage,
+          timeLimitSec,
+          timeLeftSec: extra.timedOut ? 0 : (extra.timeLeftSec ?? 0),
+          timeSpentSec:
+            timeLimitSec - (extra.timedOut ? 0 : (extra.timeLeftSec ?? 0)),
+          timedOut: !!extra.timedOut,
+          answers: details,
+        },
+        { merge: false }
+      );
     } catch (e) {
       console.error("Saving answers failed:", e.code, e.message);
       alert(`Couldn't save answers: ${e.code || ""} ${e.message || ""}`);
@@ -196,7 +234,7 @@ export default function QuizStart() {
   };
 
   const handleSubmit = async () => {
-    if (submitted) return;
+    if (submitted || alreadyDone) return;
 
     // validate all answered (only for manual submit; timeout skips this)
     const missing = questions.filter((q) => !(q.id in answers));
@@ -220,7 +258,11 @@ export default function QuizStart() {
     // time up — treat unanswered as wrong & reveal all
     setTimedOut(true);
     const result = buildResult();
-    await persistResult(result, { timedOut: true, timeLimitSec, timeLeftSec: 0 });
+    await persistResult(result, {
+      timedOut: true,
+      timeLimitSec,
+      timeLeftSec: 0,
+    });
     setScore(result.ok);
     setSubmitted(true);
   };
@@ -256,6 +298,37 @@ export default function QuizStart() {
     );
   }
 
+  // If already finished today, show message + (optional) score
+  if (alreadyDone) {
+    const pct =
+      typeof prevResult?.percentage === "number" ? prevResult.percentage : null;
+    return (
+      <div className="quiz-root">
+        <header className="quiz-topbar">
+          <div className="quiz-title">Fitness Basics Quiz</div>
+          <div className="quiz-meta">
+            <span className="pill">You have already finished today’s quiz ✅</span>
+            {typeof pct === "number" && (
+              <span
+                className="pill"
+                style={{ background: "rgba(34,197,94,.2)" }}
+              >
+                Score: {prevResult?.correct}/{prevResult?.total} ({pct}%)
+              </span>
+            )}
+          </div>
+        </header>
+
+        <div style={{ padding: "2rem" }}>
+          <p>Come back tomorrow for the next quiz.</p>
+          <Link to="/" className="home-btn">
+            Back to Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   // --- Main UI ---
   return (
     <div className="quiz-root">
@@ -267,13 +340,18 @@ export default function QuizStart() {
           <span className="pill pill-muted">Answered: {answeredCount}</span>
 
           {/* ⏳ Timer on the right */}
-          <span className={`pill pill-timer ${timeLeftSec <= 30 ? "danger" : timeLeftSec <= 60 ? "warn" : ""}`}>
+          <span
+            className={`pill pill-timer ${
+              timeLeftSec <= 30 ? "danger" : timeLeftSec <= 60 ? "warn" : ""
+            }`}
+          >
             ⏳ {fmt(timeLeftSec)}
           </span>
 
           {submitted && (
             <span className="pill" style={{ background: "rgba(34,197,94,.2)" }}>
-              Score: {score}/{total} ({total ? Math.round((score / total) * 100) : 0}
+              Score: {score}/{total} (
+              {total ? Math.round((score / total) * 100) : 0}
               %)
             </span>
           )}
@@ -322,7 +400,8 @@ export default function QuizStart() {
                   let extraClass = "";
                   if (submitted) {
                     if (idx === q.correctIndex) extraClass = "option-correct";
-                    else if (checked && idx !== q.correctIndex) extraClass = "option-wrong";
+                    else if (checked && idx !== q.correctIndex)
+                      extraClass = "option-wrong";
                   } else if (checked) {
                     extraClass = "option-checked";
                   }
@@ -330,7 +409,9 @@ export default function QuizStart() {
                   return (
                     <label
                       key={`${q.id}-${idx}`}
-                      className={`option ${extraClass} ${(submitted || timedOut || timeLeftSec <= 0) ? "disabled" : ""}`}
+                      className={`option ${extraClass} ${
+                        submitted || timedOut || timeLeftSec <= 0 ? "disabled" : ""
+                      }`}
                       onClick={() => handlePick(q.id, idx)}
                     >
                       <input
@@ -389,9 +470,13 @@ export default function QuizStart() {
         ) : (
           <div className="submit-actions">
             <div className="submit-meta">
-              {timedOut ? "Time up ⏰ — Saved to Firebase ✅" : "Saved to Firebase ✅"}
+              {timedOut
+                ? "Time up ⏰ — Saved to Firebase ✅"
+                : "Saved to Firebase ✅"}
             </div>
-            <Link to="/" className="home-btn">Back to Home</Link>
+            <Link to="/" className="home-btn">
+              Back to Home
+            </Link>
           </div>
         )}
       </div>
