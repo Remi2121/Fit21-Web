@@ -1,44 +1,71 @@
 // src/Admin/services/quizService.js
+
 import {
   collection,
-  getDocs,
   addDoc,
+  getDocs,
+  query,
+  where,
   updateDoc,
   deleteDoc,
   doc,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "./firebase";
 
-const COLLECTION = "quizzes";
+const QUIZ_COLLECTION = "quizQuestions";
 
-// 🔹 Get all quizzes
-export async function fetchQuizzes() {
-  const snap = await getDocs(collection(db, COLLECTION));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+// helper: collection reference
+function getCollectionRef() {
+  return collection(db, QUIZ_COLLECTION);
 }
 
-// quiz = { id?, day, question, options, correct, published?, expiresAt? }
-export async function saveQuiz(quiz) {
-  const { id, ...data } = quiz;
-
-  if (id) {
-    await updateDoc(doc(db, COLLECTION, id), data);
-    return id;
-  } else {
-    const ref = await addDoc(collection(db, COLLECTION), {
-      published: false,
-      expiresAt: null,
-      ...data,
-    });
-    return ref.id;
-  }
+// 🔹 get all quizzes (for admin list)
+export async function getAllQuizzes() {
+  const snap = await getDocs(getCollectionRef());
+  return snap.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+  }));
 }
 
+// 🔹 add one quiz
+export async function addQuiz(quiz) {
+  const docRef = await addDoc(getCollectionRef(), {
+    ...quiz,
+    published: false,
+    createdAt: new Date(),
+  });
+  return docRef.id;
+}
+
+// 🔹 update quiz (edit / single publish)
+export async function updateQuiz(id, quiz) {
+  const ref = doc(db, QUIZ_COLLECTION, id);
+  await updateDoc(ref, quiz);
+}
+
+// 🔹 delete quiz
 export async function deleteQuiz(id) {
-  await deleteDoc(doc(db, COLLECTION, id));
+  const ref = doc(db, QUIZ_COLLECTION, id);
+  await deleteDoc(ref);
 }
 
-// 🔹 Publish / unpublish (timer-oda state store panna use aagum)
-export async function setQuizPublishState(id, published, expiresAt = null) {
-  await updateDoc(doc(db, COLLECTION, id), { published, expiresAt });
+// 🔹 publish ALL quizzes for one day
+export async function publishAllForDay(day) {
+  const q = query(getCollectionRef(), where("day", "==", day));
+  const snap = await getDocs(q);
+
+  const batch = writeBatch(db);
+  snap.forEach((d) => batch.update(d.ref, { published: true }));
+  await batch.commit();
+}
+
+export async function deleteAllForDay(day) {
+  const q = query(getCollectionRef(), where("day", "==", day));
+  const snap = await getDocs(q);
+
+  const batch = writeBatch(db);
+  snap.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
 }
