@@ -14,7 +14,7 @@ import {
    Right:12 Sh, 24 Hip, 26 Knee, 28 Ankle, 16 Wrist, 32 BigToe
 */
 
-export default function BigToe() {
+export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const landmarkerRef = useRef(null);
@@ -26,7 +26,11 @@ export default function BigToe() {
   // popup + stopping
   const [showDone, setShowDone] = useState(false);
   const greenSinceRef = useRef(null);
+  const badSinceRef = useRef(null);           // <-- NEW: track how long it’s bad
   const stoppedRef = useRef(false);
+
+  // progress UI
+  const [, force] = useState(0);              // force repaint for timer text
 
   // graph timestamp guard
   const lastTsRef = useRef(0);
@@ -66,6 +70,7 @@ export default function BigToe() {
 
     async function init() {
       try {
+        // --- Camera ---
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: 640, height: 480, facingMode: "user" },
           audio: false,
@@ -79,6 +84,7 @@ export default function BigToe() {
 
         startLoopTimer = setTimeout(sizeCanvasAndStart, 800);
 
+        // --- Mediapipe Landmarker ---
         const vision = await FilesetResolver.forVisionTasks(
           "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.1/wasm"
         );
@@ -120,8 +126,12 @@ export default function BigToe() {
             v  = videoRef.current,
             c  = canvasRef.current;
 
-      if (!lm || !v || !c) return;
+      if (!lm || !v || !c) {
+        rafId = requestAnimationFrame(loop);
+        return;
+      }
 
+      // ~30 FPS
       if (ts - lastFrameTs > 33) {
         if (v.readyState >= 2) {
           let nowMs = Math.round(performance.now());
@@ -132,6 +142,9 @@ export default function BigToe() {
             draw(results);
             process(results);
           });
+
+          // small UI pulse for timer text
+          force((x) => x ^ 1);
         }
         lastFrameTs = ts;
       }
@@ -175,12 +188,16 @@ export default function BigToe() {
       if (!results.landmarks || !results.landmarks[0]) {
         setAllGoodState(false);
         setSideUsed("—");
-        greenSinceRef.current = null;
+        badSinceRef.current = badSinceRef.current ?? performance.now();
+        // do NOT nuke greenSince instantly; wait until badResetMs
+        const now = performance.now();
+        if (greenSinceRef.current && now - (badSinceRef.current || now) > badResetMs) {
+          greenSinceRef.current = null;
+        }
         return;
       }
 
       const lm = results.landmarks[0];
-
       const side = chooseSide(lm, W, H);
       setSideUsed(side);
 
@@ -191,8 +208,8 @@ export default function BigToe() {
       const WR  = side==="left"?lm[15]:lm[16];
       const TOE = side==="left"?lm[31]:lm[32];
 
-      const hipAngle  = angleDeg(SH, HIP, KNEE);
-      const kneeAngle = angleDeg(HIP, KNEE, ANK);
+      const hipAngle  = angleDeg(SH, HIP, KNEE);        // fold
+      const kneeAngle = angleDeg(HIP, KNEE, ANK);       // straight
       const legLen    = distPx(HIP, ANK, W, H) || 1;
 
       const dToe  = distPx(WR, TOE, W, H);
@@ -203,24 +220,26 @@ export default function BigToe() {
       const toeOK =
         dToe <= 0.40 * legLen ||
         dAnk <= 0.35 * legLen ||
-        (Math.abs((WR.x - TOE.x)*W) <= 0.08*W &&
-         WR.y*H >= TOE.y*H - 0.06*H);
+        (Math.abs((WR.x - TOE.x)*W) <= 0.08*W && WR.y*H >= TOE.y*H - 0.06*H);
 
       const pass = torsoFoldOK && legStraightOK && toeOK;
 
+      // Anti-flicker vote buffer (forgiving)
       passBuf.current[passIdx.current] = pass;
-      passIdx.current = (passIdx.current+1) % passBuf.current.length;
-
+      passIdx.current = (passIdx.current + 1) % passBuf.current.length;
       const goodFrames = passBuf.current.reduce((a,b)=>a+(b?1:0),0);
-      const finalGood = goodFrames >= 6;
+      const finalGood = goodFrames >= 4; // 4/8 frames good = OK
 
       setAllGoodState(finalGood);
 
       const now = performance.now();
-      if (finalGood) {
-        if (!greenSinceRef.current) greenSinceRef.current = now;
 
-        if (!stoppedRef.current && now - greenSinceRef.current >= 60000) {
+      if (finalGood) {
+        // start or continue the green timer
+        if (!greenSinceRef.current) greenSinceRef.current = now;
+        badSinceRef.current = null;
+
+        if (!stoppedRef.current && now - greenSinceRef.current >= holdMs) {
           stoppedRef.current = true;
           setShowDone(true);
           setStatus("completed");
@@ -232,7 +251,11 @@ export default function BigToe() {
           }
         }
       } else {
-        greenSinceRef.current = null;
+        // only reset if "bad" lasts long enough
+        if (!badSinceRef.current) badSinceRef.current = now;
+        if (greenSinceRef.current && now - badSinceRef.current > badResetMs) {
+          greenSinceRef.current = null;
+        }
       }
     }
 
@@ -248,7 +271,12 @@ export default function BigToe() {
       if (v?.srcObject)
         v.srcObject.getTracks().forEach(t=>t.stop());
     };
-  }, []);
+  }, [holdMs, badResetMs]);
+
+  // progress seconds (for UI only)
+  const progressSec = greenSinceRef.current
+    ? Math.max(0, ((performance.now() - greenSinceRef.current) / 1000)).toFixed(1)
+    : "0.0";
 
   return (
     <div className="bt-container">
@@ -275,26 +303,26 @@ export default function BigToe() {
         <img src={Bigtoeimg} className="bt-pose-img" alt="ref" draggable="false" />
       </div>
 
-      {/* ✅ status USED here (Option-1 fix) */}
       <div className="bt-status">
         <span className="bt-label">AI Status:</span> {allGoodState ? "good (green)" : "adjust posture"}
         <span className="bt-sep" />
         <span className="bt-label">Side:</span> {sideUsed}
         <span className="bt-sep" />
         <span className="bt-label">Camera:</span> {status}
+        <span className="bt-sep" />
+        <span className="bt-label">Hold:</span> {progressSec}s / {(holdMs/1000)|0}s
       </div>
 
       <p className="bt-note">
-        Side view only: hip ≤ 80°, knee ≥ 165°, wrist near big toe.
+        Side view only: hip ≤ 80°, knee ≥ 165°, wrist near big toe. (Small flickers won’t reset the timer.)
       </p>
 
-      {/* SUCCESS POPUP */}
       {showDone && (
         <div className="bt-done">
           <div className="bt-done-card">
             <h3>Great job! ✅</h3>
-            <p>You held the pose for 60 second.</p>
-            <button className="resetbutton"onClick={() => window.location.reload()}>
+            <p>You held the pose for {(holdMs/1000)|0} seconds.</p>
+            <button className="resetbutton" onClick={() => window.location.reload()}>
               Restart Camera
             </button>
           </div>
