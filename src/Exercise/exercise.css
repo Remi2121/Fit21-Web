@@ -22,8 +22,6 @@
   justify-content: center;
   font-family: "Poppins", system-ui, sans-serif;
   color: var(--text);
-
-  /* full red-black background */
   background:
     radial-gradient(1200px 700px at 20% 0%, #790505 0%, transparent 60%),
     linear-gradient(135deg, var(--bg1), var(--bg2));
