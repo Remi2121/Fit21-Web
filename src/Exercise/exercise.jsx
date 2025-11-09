@@ -8,7 +8,7 @@ const ExerciseSelect = () => {
   const exercises = [
     { name: "Pushup", icon: <FaArrowUp />, path: "/pushup" },
     { name: "Jumping", icon: <FaRunning />, path: "/jumping" },
-    { name: "Running", icon: <FaDumbbell />, path: "/running" },
+    { name: "Yoga", icon: <FaDumbbell />, path: "/yoga" },
     { name: "Quiz", icon: <FaQuestionCircle />, path: "/quizstart" },
   ];
 
