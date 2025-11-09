@@ -14,13 +14,13 @@ import {
 import { db } from "./firebase";
 
 const QUIZ_COLLECTION = "quizQuestions";
+const DEFAULT_TIME_LIMIT_MINUTES = 10; // 👈 ippo fix pannalaam
 
-// helper: collection reference
 function getCollectionRef() {
   return collection(db, QUIZ_COLLECTION);
 }
 
-// 🔹 get all quizzes (for admin list)
+// 🔹 get all quizzes (admin list)
 export async function getAllQuizzes() {
   const snap = await getDocs(getCollectionRef());
   return snap.docs.map((d) => ({
@@ -29,15 +29,16 @@ export async function getAllQuizzes() {
   }));
 }
 
-// 🔹 add one quiz
 export async function addQuiz(quiz) {
   const docRef = await addDoc(getCollectionRef(), {
     ...quiz,
     published: false,
+    timeLimitMinutes: DEFAULT_TIME_LIMIT_MINUTES, // 👈 IMPORTANT
     createdAt: new Date(),
   });
   return docRef.id;
 }
+
 
 // 🔹 update quiz (edit / single publish)
 export async function updateQuiz(id, quiz) {
@@ -61,6 +62,7 @@ export async function publishAllForDay(day) {
   await batch.commit();
 }
 
+// 🔹 delete ALL quizzes for one day
 export async function deleteAllForDay(day) {
   const q = query(getCollectionRef(), where("day", "==", day));
   const snap = await getDocs(q);
