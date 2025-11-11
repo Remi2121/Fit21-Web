@@ -7,7 +7,11 @@ import ScrollToHash from "./components/common/ScrollToTop.jsx";
 import Quiz from "./Exercise/quiz/QuizStart.jsx";
 import Leaderboard from "./Leaderboard/Leaderboard.jsx";  
 import Admin from "./Admin/AdminDashboard.jsx";
-import Exercise from "./Exercise/exercise.jsx"
+import Exercise from "./Exercise/exercise.jsx";
+import Yoga from "./Exercise/Yoga/Yogo.jsx";
+import PushUp from "./Exercise/pushup/pushup.jsx";
+import Plank from "./Exercise/plank/plank.jsx";
+import Squat from "./Exercise/Scott/squat.jsx"
 
 
 function App() {
@@ -20,7 +24,10 @@ function App() {
           <Route path="/pages" element={<Pages />} />
           <Route path="/admin" element={<Admin />} /> 
           <Route path="/exercise" element={<Exercise />} />
-          
+          <Route path="/yoga" element={<Yoga />} />
+          <Route path="/pushup" element={<PushUp />} />
+          <Route path="/squat" element={<Squat />} />
+          <Route path="/plank" element={<Plank />} />
           <Route path="/quizstart" element={<Quiz />} /> 
           <Route path="/leaderboard" element={<Leaderboard />} /> 
           <Route path="/contact" element={<Navigate to="/#contact" replace />} />
