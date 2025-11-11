@@ -1,0 +1,157 @@
+:root{
+  --header-h: 80px;      /* desktop header height */
+  --menu-left-nudge: -2rem; /* fine-tune the menu a bit to the left */
+}
+
+@media (max-width: 768px){
+  :root{ --header-h: 64px; --menu-left-nudge: -1rem; }
+}
+
+/* Fixed header bar */
+.header{
+  position: absolute;
+  top: 0; left: 0; width: 100%;
+  height: var(--header-h);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;     /* centers the menu block */
+  padding: 0 24px;
+  background: rgba(0,0,0,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.25);
+  backdrop-filter: saturate(140%) blur(6px);
+}
+
+/* Logo pinned left, doesn't affect menu centering */
+.logo{
+  position: absolute;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10rem;
+  height: 13rem;
+  object-fit: contain;
+}
+
+/* Centered menu (nudged slightly left) */
+.header-menu{
+  list-style: none;
+  display: flex;
+  gap: 3rem;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  left: var(--menu-left-nudge); /* move a bit to left */
+}
+
+.header-menu a{
+  text-decoration: none;
+  color: #fff;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: color .25s ease, transform .15s ease;
+}
+
+.header-menu a:hover,
+.header-menu a:focus{
+  color: var(--red);
+  outline: none;
+}
+
+.header-menu li:hover{
+  transform: translateY(-1px);
+}
+
+.header, .header *{ color: #fff; }
+
+/* Popup shell (hidden by default) */
+.contact-popup{
+  position: fixed;
+  inset: 0;
+  display: none;                 /* toggled by .show */
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.45);
+  z-index: 2000;                 /* above header */
+  padding: 16px;                 /* mobile safe */
+}
+.contact-popup.show{ display: flex; }
+
+/* Panel */
+.contact-popup-container{
+  width: min(720px, 100%);
+  background: #111;
+  color: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  padding: 20px 20px 24px;
+  overflow: hidden;              /* no x-scroll */
+  animation: contactPop 180ms ease-out;
+}
+
+/* Title row */
+.contact-popup-title{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+.contact-popup-title img{
+  width: 28px; height: 28px;
+  cursor: pointer;
+  filter: invert(1);
+}
+
+.contact-popup-sub{
+  margin: 0 0 8px;
+  color: #ddd;
+  font-size: 0.95rem;
+}
+.contact-popup-info{
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 0.92rem;
+  color: #eaeaea;
+}
+
+/* Form */
+.contact-form--popup{
+  display: grid;
+  gap: 12px;
+}
+.contact-form--popup input,
+.contact-form--popup textarea{
+  width: 100%;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: #fff;
+  border-radius: 10px;
+  padding: 12px 14px;
+  outline: none;
+}
+.contact-form--popup input:focus,
+.contact-form--popup textarea:focus{
+  border-color: var(--red, #bd3951);
+}
+.btn-contact-btn{
+  padding: 12px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--red, #bd3951);
+  color: #fff;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+/* Anim */
+@keyframes contactPop {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+

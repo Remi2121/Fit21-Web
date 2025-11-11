@@ -1,0 +1,368 @@
+/* Layout */
+.fit-home-container{
+  display:flex;
+  justify-content:space-between;
+  min-height:100svh; 
+  position: relative;     /* anchor absolutely-positioned children */
+  isolation: isolate;            /* mobile-safe fullscreen */
+}
+
+/* Left */
+.fit-home-left{
+  flex:3;
+  padding:2rem;
+  padding-right:1.5rem;
+}
+
+/* Right red panel */
+.fit-home-right{
+  flex:1;
+  position:relative;
+  background-color:var(--red);
+  min-height:100svh;
+  height:auto;
+}
+
+/* Welcome pill */
+.fit-home-content{
+  margin-top:4rem;
+  background-color:#363d36;
+  border-radius:4rem;
+  /* width: fit-content;  <-- REMOVE */
+  display:inline-flex;          /* behaves like fit-content but wraps */
+  max-width:100%;
+  padding:20px 13px;
+  text-transform:uppercase;
+  color:#fff;
+  position:relative;
+  align-items:center;
+  justify-content:flex-start;
+  overflow:hidden;
+}
+.fit-home-content>span{ z-index:2; position:relative; }
+.fit-home-content>div{
+  position:absolute;
+  height:80%;
+  width:5.4rem;
+  max-width:35%;
+  border-radius:3rem;
+  background-color:var(--red);
+  left:8px;
+  z-index:1;
+}
+
+/* Big headings */
+.fit-home-tag{
+  display:flex;
+  flex-direction:column;
+  gap:1.5rem;
+  text-transform:uppercase;
+  font-size:2.5rem;
+  font-weight:bold;
+  color:#fff;
+  padding-top:2rem;
+}
+
+/* Stats */
+.fit-home-figures{
+  display:flex;
+  gap:1rem;
+  padding-top:5rem;
+}
+.fit-home-figures>div{
+  display:flex;
+  flex-direction:column;
+  gap:.5rem;
+  color:#fff;
+}
+.fit-home-figures>div>span:nth-of-type(1){
+  font-size:2rem;
+  font-weight:bold;
+}
+.fit-home-figures>div>span:nth-of-type(2){
+  font-size:1rem;
+  color:var(--gray);
+  text-transform:uppercase;
+}
+
+/* Buttons row */
+.fit-home-buttons{
+  padding-top:8rem;
+  display:flex;
+  gap:1rem;
+  font-weight:normal;
+}
+.fit-home-buttons>:nth-child(1),
+.fit-home-buttons>:nth-child(2){
+  background-color:var(--red);
+  color:#fff;
+  border-radius:2rem;
+  padding:.8rem 2rem;
+  border:none;
+}
+
+
+.fit-home-right .btn{
+  position:absolute;
+  right:10rem;
+  top:1.5rem;
+  color:#000;
+  z-index: 1000;
+  font-weight: bold;
+}
+
+.ad-btn{
+  position:absolute;
+  right:3rem;
+  top:1.5rem;
+  color:#000;
+  z-index: 1000;
+  background-color: white;
+  padding: 0.5rem;
+  border: 4px solid transparent;
+  transition: 300ms all;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 10rem;
+  width: 6rem;
+  height: 2.1rem;
+  font-weight: bold;
+}
+.ad-btn a {
+  color: inherit;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.ad-btn a:hover {
+  text-decoration: none;
+}
+.ad-btn:hover{
+  cursor: pointer;
+  background-color: rgb(211, 165, 165);
+}
+
+
+.workouts-section {
+  width: 100%;
+  /* fallbacks: older → newer; last supported wins */
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
+
+  height: auto;
+  background:var(--appColor);
+  color: #fff;
+  padding: 64px 16px;
+  /* keep content visible above gesture bar / notch */
+  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+
+  overflow-x: hidden; /* avoid tiny horizontal spill that reveals white */
+}
+
+.fit-home-image{
+    position:absolute;
+    top: 8rem;
+    right: 1rem;
+    width: 35rem;
+}
+
+.fit-home-image-back{
+    position:absolute;
+    top: 10rem;
+    right:4rem;
+    width: 15rem;
+    z-index:-1;
+}
+
+ .fit-home-blur-f{
+  display: block !important;
+  width: 20rem;
+  height: 30rem;
+  left: 0;
+  top: 1rem;
+    background: rgba(201, 33, 128, 0.97);
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(200px);
+    z-index: -9;
+ }
+
+ /* popup base (reuse your login-popup style if you want) */
+.admin-popup {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.6);
+  display: none; align-items: center; justify-content: center;
+  z-index: 2000;
+}
+.admin-popup.show { display: flex; }
+
+.admin-popup-container{
+  width: min(520px, 92vw);
+  background: #1e1f22;
+  color: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.4);
+}
+.admin-popup-title{
+  display:flex; align-items:center; justify-content:space-between;
+  font-weight:700; font-size:1.1rem; margin-bottom:12px;
+}
+
+.admin-section{ margin-top: 18px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.12); }
+.admin-form{ display:flex; gap:10px; flex-direction:column; margin-top:8px; }
+.admin-form input{
+  padding: .7rem .9rem; border-radius: 10px; border: 1px solid #444; background:#111; color:#fff;
+}
+.admin-go{ margin-top: 10px; display:flex; gap:12px; align-items:center; }
+.note{ margin: 8px 0 0; font-size:.9rem; opacity:.9; }
+.warn{ margin: 8px 0 0; color:#ffb4b4; font-size:.9rem; }
+
+
+/* ----------------- Responsive ----------------- */
+@media (max-width: 992px){
+  .fit-home-tag{ font-size:2rem; line-height:1.2; }
+  .fit-home-content{ padding:14px 16px; border-radius:2rem; }
+}
+
+@media (max-width: 768px){
+  .fit-home-container{ flex-direction:column; }
+
+  .fit-home-left{ padding:1rem; }
+
+  /* Make the red area a top bar instead of full-height on phones
+     (if you want full height even on phones, delete min-height line) */
+  .fit-home-right{
+    order:-1;
+    min-height:56px;
+    height:auto;
+  }
+  .fit-home-right .btn{
+    position:static;
+    display:block;
+    margin:.75rem auto;
+  }
+
+  .fit-home-tag{
+    font-size:1.6rem;
+    text-align:left;
+  }
+
+  .fit-home-buttons{
+    padding-top:2rem;
+    flex-direction:column;
+    gap:.75rem;
+    width:100%;
+  }
+  .fit-home-buttons .btn{ width:100%; }
+}
+
+@media (max-width: 380px){
+  .fit-home-tag{ font-size:1.3rem; }
+}
+
+/* ===============================
+   ✨ GLOWING LOGIN POPUP STYLES ✨
+   =============================== */
+
+/* Overlay */
+.login-popup {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;                 /* above header & hero */
+  visibility: hidden;
+  opacity: 0;
+  transition: visibility 0s, opacity 0.3s ease-in-out;
+}
+
+/* Visible state */
+.login-popup.show {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Border glow animation */
+@keyframes glowing-border {
+  0% { box-shadow: 0 0 10px 0 rgba(244, 19, 3, 0.6); }
+  50% { box-shadow: 0 0 20px 5px rgba(244, 3, 196, 0.8); }
+  100% { box-shadow: 0 0 10px 0 rgba(3, 233, 244, 0.6); }
+}
+
+/* Popup card */
+.login-popup-container {
+  width: max(25vw, 350px);
+  background-color: rgba(0, 0, 0, 0.85);
+  padding: 30px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  color: #fff;
+  animation: glowing-border 1.5s infinite ease-in-out;
+  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  border: 1px solid rgba(255,255,255,.12);
+}
+
+/* Title bar */
+.login-popup-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+  font-size: 18px;
+}
+.login-popup-title img {
+  width: 22px; height: 22px; cursor: pointer;
+  filter: brightness(0) invert(1);
+  transition: transform .2s;
+}
+.login-popup-title img:hover { transform: scale(1.2); }
+
+/* Inputs inside modal (scoped to this popup) */
+.login-popup-inputs input {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 14px;
+  border: none;
+  border-bottom: 1px solid #fff;
+  color: #fff;
+  background: transparent;
+  outline: none;
+  transition: border-color .3s;
+}
+.login-popup-inputs input:focus {
+  border-bottom: 1px solid #03e9f4;
+}
+
+/* Buttons inside login */
+.login-box button {
+  margin-top: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  color: #fff;
+  background-color: var(--red, #e53935);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: filter .25s ease;
+}
+.login-box button:hover { filter: brightness(1.1); }
+
+/* Toggle link */
+.toggle-link {
+  text-align: center;
+  color: #03e9f4;
+  cursor: pointer;
+}
+.toggle-link:hover { text-decoration: underline; }

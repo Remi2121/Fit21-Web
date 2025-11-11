@@ -1,0 +1,46 @@
+.pushup-container {
+  width: 100vw;                               
+  display: flex;
+  flex-direction: column;
+  background-color: rgb(126, 126, 119);
+  align-items: flex-start;
+  justify-content: flex-start;
+  color: #fff;        
+  box-shadow: none;          
+  min-height: 60dvh;
+  height: auto;
+  box-sizing: border-box;
+  padding-top: 1rem;    
+  padding-left: 3rem;         
+}
+
+
+.pushup-container h3{
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  color: var(--red);
+}
+
+.pushup-container p,
+.pushup-container span{
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #eaeaea;
+}
+
+/* Optional: spacing between spans */
+.pushup-container span + span{
+  margin-top: 0.4rem;
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px){
+  .pushup-container{
+    padding: 1.5rem;
+    min-height: 50dvh;           /* a bit smaller on phones */
+  }
+  .pushup-container h3{
+    font-size: 1.5rem;
+  }
+}
