@@ -7,9 +7,10 @@ import Headers from "../components/header/header";
 const ExerciseSelect = () => {
   const exercises = [
     { name: "Pushup", icon: <FaArrowUp />, path: "/pushup" },
-    { name: "Jumping", icon: <FaRunning />, path: "/jumping" },
+    { name: "Plank", icon: <FaRunning />, path: "/plank" },
     { name: "Yoga", icon: <FaDumbbell />, path: "/yoga" },
     { name: "Quiz", icon: <FaQuestionCircle />, path: "/quizstart" },
+    { name: "Squat", icon: <FaQuestionCircle />, path: "/squat" },
   ];
 
   return (
