@@ -1,7 +1,6 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import "./fithome.css";
 import Headers from "../header/header.jsx";
-import Pages from "../../pages/pages.jsx";
 import hero_image from "../../assets/hero_image.png";
 import hero_image_back from "../../assets/hero_image_back.png";
 import { motion } from "framer-motion";
@@ -27,7 +26,6 @@ import {
 } from "firebase/firestore";
 
 const Fithome = () => {
-  const pagesRef = useRef(null);
   const [showLogin, setShowLogin] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
 
@@ -35,6 +33,7 @@ const Fithome = () => {
   const [checkingAdmin, setCheckingAdmin] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [userEmail, setUserEmail] = useState(null);
+  const [userName, setUserName] = useState("Guest");         // 👈 username shown in greeting
 
   // Admin login form
   const [adminEmail, setAdminEmail] = useState("");
@@ -63,12 +62,22 @@ const Fithome = () => {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Watch auth → detect admin from Firestore
+  // Watch auth → detect admin from Firestore + derive username
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       setCheckingAdmin(true);
       setIsAdmin(false);
       setUserEmail(u?.email ?? null);
+
+      // 👇 derive a friendly name
+      if (u) {
+        const friendly =
+          (u.displayName && u.displayName.trim()) ||
+          (u.email ? u.email.split("@")[0] : "User");
+        setUserName(friendly);
+      } else {
+        setUserName("Guest");
+      }
 
       if (!u) {
         setCheckingAdmin(false);
@@ -183,7 +192,9 @@ const Fithome = () => {
               whileInView={{ left: "8px" }}
               transition={{ ...transition, type: "tween" }}
             />
-            <span>Welcome to FitLife at Sjp</span>
+            <span>
+              Welcome to FitLife at Sjp — <strong>@{userName}</strong>
+            </span>
           </div>
 
           <div className="fit-home-tag">
@@ -230,21 +241,16 @@ const Fithome = () => {
         </div>
       </div>
 
-      {/* Scroll target for Get Started */}
-      <section id="workouts" ref={pagesRef}>
-        <Pages />
-      </section>
-
-            {/*  Login Popup */}
+      {/*  Login Popup */}
       <div
         className={`login-popup ${showLogin ? "show" : ""}`}
         role="dialog"
         aria-modal="true"
-        onClick={() => setShowLogin(false)}              
+        onClick={() => setShowLogin(false)}
       >
         <div
           className="login-popup-container"
-          onClick={(e) => e.stopPropagation()}          
+          onClick={(e) => e.stopPropagation()}
         >
           <div className="login-popup-title">
             <span>Welcome to FitLife</span>

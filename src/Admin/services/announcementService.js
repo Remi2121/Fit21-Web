@@ -1,34 +1,69 @@
 // src/Admin/services/announcementService.js
+
 import {
   collection,
-  getDocs,
   addDoc,
+  getDocs,
   updateDoc,
   deleteDoc,
   doc,
+  query,
+  orderBy,
+  serverTimestamp,
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { db } from "../../firebase";
 
-const COLLECTION = "announcements";
+const ANNOUNCEMENT_COLLECTION = "announcements";
 
+function getCollectionRef() {
+  return collection(db, ANNOUNCEMENT_COLLECTION);
+}
+
+// 🔹 Get all announcements (sorted by day)
 export async function fetchAnnouncements() {
-  const snap = await getDocs(collection(db, COLLECTION));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const q = query(getCollectionRef(), orderBy("day", "asc"));
+  const snap = await getDocs(q);
+
+  return snap.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+  }));
 }
 
-// announcement = { id?, day, title, message }
-export async function saveAnnouncement(announcement) {
-  const { id, ...data } = announcement;
+// 🔹 Add new announcement
+export async function addAnnouncement(data) {
+  const payload = {
+    day: Number(data.day) || 0,
+    title: data.title || "",
+    message: data.message || "",
+    body: data.message || "",
+    mediaUrl: data.mediaUrl || "",
+    mediaType: data.mediaType || "",
+    createdAt: serverTimestamp(),
+  };
 
-  if (id) {
-    await updateDoc(doc(db, COLLECTION, id), data);
-    return id;
-  } else {
-    const ref = await addDoc(collection(db, COLLECTION), data);
-    return ref.id;
-  }
+  const docRef = await addDoc(getCollectionRef(), payload);
+  return docRef.id;
 }
 
+// 🔹 Update announcement
+export async function updateAnnouncement(id, data) {
+  const ref = doc(db, ANNOUNCEMENT_COLLECTION, id);
+
+  const payload = {
+    day: Number(data.day) || 0,
+    title: data.title || "",
+    message: data.message || "",
+    body: data.message || "",
+    mediaUrl: data.mediaUrl || "",
+    mediaType: data.mediaType || "",
+  };
+
+  await updateDoc(ref, payload);
+}
+
+// 🔹 Delete announcement
 export async function deleteAnnouncement(id) {
-  await deleteDoc(doc(db, COLLECTION, id));
+  const ref = doc(db, ANNOUNCEMENT_COLLECTION, id);
+  await deleteDoc(ref);
 }

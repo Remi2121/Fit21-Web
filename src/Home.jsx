@@ -4,6 +4,7 @@ import Owners from "./owners/owners.jsx";
 import Testimonials from "./Testimonials/Testimonials.jsx";
 import Fooder from "./components/fooder/Fooder.jsx";
 import ContactUs from "./contactus/contactus..jsx";
+import Announcement from "./announcements/announcements.jsx"
 
 export default function Home() {
   return (
@@ -11,6 +12,7 @@ export default function Home() {
       <Fit />
       <Owners />
       <Testimonials />
+      <Announcement/>
       <ContactUs />
       <Fooder />
     </>
