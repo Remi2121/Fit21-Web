@@ -120,6 +120,7 @@ export default function LeaderboardSection({
   return (
     <div>
       <h1 className="page-title">Points &amp; Leaderboard</h1>
+
       <Card title="Users Progress (21 Days)">
         {/* top info: current challenge day */}
         <div className="leaderboard-top">
@@ -174,43 +175,45 @@ export default function LeaderboardSection({
         </div>
 
         {/* Table */}
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Rank</th>
-              <th>User</th>
-              <th>Days Completed</th>
-              <th>Points</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {leaderboard.map((user) => (
-              <tr key={user.id}>
-                <td>{user.rank != null ? user.rank : "-"}</td>
-                <td>{user.name}</td>
-                <td>
-                  {user.daysCompleted} / {currentDay}
-                </td>
-                <td>{user.points}</td>
-                <td>
-                  <button
-                    onClick={() => startEdit(user)}
-                    className="btn btn-small btn-outline"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeletePlayer(user.id)}
-                    className="btn btn-small btn-danger"
-                  >
-                    Delete
-                  </button>
-                </td>
+        <div className="table-wrapper">
+          <table className="admin-table leaderboard-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>User</th>
+                <th>Days Completed</th>
+                <th>Points</th>
+                <th>Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {leaderboard.map((user) => (
+                <tr key={user.id}>
+                  <td>{user.rank != null ? user.rank : "-"}</td>
+                  <td>{user.name}</td>
+                  <td>
+                    {user.daysCompleted} / {currentDay}
+                  </td>
+                  <td>{user.points}</td>
+                  <td className="action-cell">
+                    <button
+                      onClick={() => startEdit(user)}
+                      className="btn btn-small btn-outline"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeletePlayer(user.id)}
+                      className="btn btn-small btn-danger"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         {/* Edit form */}
         {editData && (

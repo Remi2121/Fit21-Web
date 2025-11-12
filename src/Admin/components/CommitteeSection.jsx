@@ -1,4 +1,4 @@
-// src/Admin/components/CommitteeSection.jsx  (path un project-ku match panniko)
+// src/Admin/components/CommitteeSection.jsx
 import React, { useEffect, useState } from "react";
 import {
   getCommitteeMembers,
@@ -127,7 +127,6 @@ export default function CommitteeSection() {
       style={{
         minHeight: "100vh",
         width: "100%",
-        // background nu un maadhiri dark red → dark purple theme
         background:
           "radial-gradient(circle at top left, #ff6a3d 0, #1b1023 35%, #050816 80%)",
         color: "#fff",
@@ -330,110 +329,116 @@ export default function CommitteeSection() {
               gap: "0.5rem",
             }}
           >
-            {committee.map((member) => (
-              <div
-                key={member.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "0.75rem 0.5rem",
-                  borderBottom: "1px solid rgba(255,255,255,0.08)",
-                }}
-              >
+            {committee.map((member) => {
+              // support different possible field names from Firestore
+              const photoSrc =
+                member.photoUrl || member.mediaUrl || member.photo || "";
+
+              return (
                 <div
+                  key={member.id}
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "0.75rem",
+                    justifyContent: "space-between",
+                    padding: "0.75rem 0.5rem",
+                    borderBottom: "1px solid rgba(255,255,255,0.08)",
                   }}
                 >
-                  {member.photoUrl ? (
-                    <img
-                      src={member.photoUrl}
-                      alt={member.name}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.75rem",
+                    }}
+                  >
+                    {photoSrc ? (
+                      <img
+                        src={photoSrc}
+                        alt={member.name}
+                        style={{
+                          width: "46px",
+                          height: "46px",
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                          border: "2px solid rgba(255,255,255,0.3)",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: "46px",
+                          height: "46px",
+                          borderRadius: "50%",
+                          background:
+                            "linear-gradient(135deg, #4c669f, #3b5998, #192f6a)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#fff",
+                          fontWeight: 600,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {member.name?.[0] || "?"}
+                      </div>
+                    )}
+
+                    <div>
+                      <div style={{ fontWeight: 600, color: "#fff" }}>
+                        {member.name}
+                      </div>
+                      <div style={{ fontSize: "0.9rem", color: "#ccc" }}>
+                        {member.role}
+                      </div>
+                      {member.phone && (
+                        <div style={{ fontSize: "0.8rem", color: "#aaa" }}>
+                          📞 {member.phone}
+                        </div>
+                      )}
+                      {member.email && (
+                        <div style={{ fontSize: "0.8rem", color: "#aaa" }}>
+                          ✉️ {member.email}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <button
+                      type="button"
+                      onClick={() => handleEdit(member)}
                       style={{
-                        width: "46px",
-                        height: "46px",
-                        borderRadius: "50%",
-                        objectFit: "cover",
-                        border: "2px solid rgba(255,255,255,0.3)",
-                      }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: "46px",
-                        height: "46px",
-                        borderRadius: "50%",
-                        background:
-                          "linear-gradient(135deg, #4c669f, #3b5998, #192f6a)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#fff",
-                        fontWeight: 600,
-                        textTransform: "uppercase",
+                        padding: "0.25rem 0.8rem",
+                        borderRadius: "999px",
+                        border: "1px solid #60a5fa",
+                        background: "transparent",
+                        color: "#bfdbfe",
+                        cursor: "pointer",
+                        fontSize: "0.85rem",
                       }}
                     >
-                      {member.name?.[0] || "?"}
-                    </div>
-                  )}
-
-                  <div>
-                    <div style={{ fontWeight: 600, color: "#fff" }}>
-                      {member.name}
-                    </div>
-                    <div style={{ fontSize: "0.9rem", color: "#ccc" }}>
-                      {member.role}
-                    </div>
-                    {member.phone && (
-                      <div style={{ fontSize: "0.8rem", color: "#aaa" }}>
-                        📞 {member.phone}
-                      </div>
-                    )}
-                    {member.email && (
-                      <div style={{ fontSize: "0.8rem", color: "#aaa" }}>
-                        ✉️ {member.email}
-                      </div>
-                    )}
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(member.id)}
+                      style={{
+                        padding: "0.25rem 0.8rem",
+                        borderRadius: "999px",
+                        border: "1px solid #f87171",
+                        background: "transparent",
+                        color: "#fecaca",
+                        cursor: "pointer",
+                        fontSize: "0.85rem",
+                      }}
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
-
-                <div style={{ display: "flex", gap: "0.5rem" }}>
-                  <button
-                    type="button"
-                    onClick={() => handleEdit(member)}
-                    style={{
-                      padding: "0.25rem 0.8rem",
-                      borderRadius: "999px",
-                      border: "1px solid #60a5fa",
-                      background: "transparent",
-                      color: "#bfdbfe",
-                      cursor: "pointer",
-                      fontSize: "0.85rem",
-                    }}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(member.id)}
-                    style={{
-                      padding: "0.25rem 0.8rem",
-                      borderRadius: "999px",
-                      border: "1px solid #f87171",
-                      background: "transparent",
-                      color: "#fecaca",
-                      cursor: "pointer",
-                      fontSize: "0.85rem",
-                    }}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
