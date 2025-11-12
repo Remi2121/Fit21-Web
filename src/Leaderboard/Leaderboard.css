@@ -114,3 +114,65 @@
   cursor: pointer;
 }
 .back-btn:hover{ background:#a12c43; }
+
+/* ---------- Mobile: ensure Rank column is always visible ---------- */
+@media (max-width: 600px) {
+  .leaderboard-screen{ padding: 8px !important; }
+
+  .leaderboard-panel{
+    width: 96% !important;
+    max-width: 900px !important;
+    max-height: calc(100vh - var(--header-h, 80px) - 28px) !important;
+    border-radius: 12px !important;
+  }
+
+  .panel-title h1{ font-size: 1.25rem !important; }
+  .panel-title p { font-size: .88rem !important; }
+
+  .table-scroll{
+    padding: 8px 12px !important;
+    overflow: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: auto !important;
+  }
+
+  /* make sure table fits and all three columns show */
+  .leaderboard-table{
+    min-width: unset !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    table-layout: fixed !important;
+  }
+
+  /* force header + cells to behave as table cells (prevent some mobile UA collapsing) */
+  .leaderboard-table th,
+  .leaderboard-table td {
+    display: table-cell !important;
+    padding: 8px 10px !important;
+    font-size: 0.92rem !important;
+    text-align: center !important;
+    white-space: nowrap;
+    overflow: visible !important;
+  }
+
+  /* explicit column width distribution so Rank stays visible */
+  .leaderboard-table th:nth-child(1),
+  .leaderboard-table td:nth-child(1) { width: 18% !important; }  /* Rank */
+  .leaderboard-table th:nth-child(2),
+  .leaderboard-table td:nth-child(2) { width: 54% !important; }  /* Player */
+  .leaderboard-table th:nth-child(3),
+  .leaderboard-table td:nth-child(3) { width: 28% !important; }  /* Points */
+
+  /* reduce padding for header only to keep space */
+  .leaderboard-table thead th { padding: 10px 8px !important; font-size: .98rem !important; }
+
+  /* ensure medal rows remain visible */
+  .gold td, .silver td, .bronze td { font-weight: 700 !important; }
+
+  .back-btn{
+    display: inline-block !important;
+    min-width: 160px !important;
+    padding: 10px 22px !important;
+    border-radius: 28px !important;
+  }
+}

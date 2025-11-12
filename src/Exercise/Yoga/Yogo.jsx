@@ -1,11 +1,11 @@
 import React from 'react'
 import BigToe from "./Big Toe/Big-Toe"
-import CrescentLunge from "./Crescent Lunge/Crescent-Lunge"
+import Bridge from "./Bridge/BridgePose"
 const Yogo = () => {
   return (
     <div>
       <BigToe/>
-      <CrescentLunge/>
+      <Bridge/>
     </div>
   )
 }

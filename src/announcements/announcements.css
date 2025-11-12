@@ -151,23 +151,131 @@
   padding: 12px 0;
 }
 
-/* responsive */
-@media (max-width: 860px){
+/* ---- Mobile & Tablet improvements for Announcements ---- */
+
+/* Tablet and smaller: stack the layout and center media */
+@media (max-width: 860px) {
   .announce-content,
-  .announce-skeleton{ grid-template-columns: 1fr; }
+  .announce-skeleton {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
 
-  .media-box{ height: 220px; }
-
-  .anoframe{
-    top:-12px; left:-12px;
-    width:calc(100% + 24px);
-    height:calc(100% + 24px);
-    border-width: 2px;
+  /* Media size reduced for smaller screens */
+  .media-box,
+  .media-frame,
+  .yt-frame {
+    height: 220px;
     border-radius: 14px;
   }
+
+  /* Thin red outline — sit centered above media */
+  .anoframe{
+  position: absolute;
+  inset: 2rem -0.2rem auto auto;   /* top/right offset */
+  width: 9rem;
+  height: 15rem;
+  border: 2px solid red;
+  background: transparent;
+  z-index: 1;
+  border-radius: 8px;
+  }
+
+  /* Bg block repositioned behind media and centered */
   .anobg-block{
-    right:-14px; bottom:-14px;
-    width:90%; height:90%;
+  position: absolute;
+  top: 3rem;
+  width: 14rem;
+  height: 19rem;
+  right: -0.7rem;
+  background: var(--planCard);
+  z-index: 2;
+  border-radius: 8px;
+  }
+
+  /* Announce text moves below media with padding reset */
+  .announce-text {
+    padding-left: 0;
+    padding-top: 12px;
+  }
+
+  .announce-text h3 {
+    font-size: 2.4rem; /* smaller title on phones */
+    margin-bottom: 8px;
+  }
+  .announce-text p {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 8px;
+  }
+
+  /* Arrows: place below media and center for touch */
+  .anoarrows {
+    position: static;
+    margin-top: 14px;
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+  }
+  .anoarrows img {
+    width: 2.2rem;
+    height: 2.2rem;
+    cursor: pointer;
+    user-select: none;
+    touch-action: manipulation;
+    padding: 6px;
+    border-radius: 6px;
+  }
+  .anoarrows img.disabled {
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  /* Skeleton adjustments */
+  .sk-media { height: 220px; border-radius: 14px; }
+  .announce-skeleton { gap: 16px; }
+
+  /* ensure card width stays comfortable */
+  .announce-card { width: min(920px, 96vw); }
+}
+
+/* Small phones: further scale down */
+@media (max-width: 480px) {
+  .media-box,
+  .media-frame,
+  .yt-frame {
+    height: 180px;
     border-radius: 12px;
   }
+
+  .anoframe {
+    top: -10px;
+    width: calc(100% + 16px);
+    height: calc(100% + 10px);
+    border-width: 1.6px;
+    border-radius: 12px;
+  }
+
+  .anobg-block {
+    bottom: -10px;
+    width: 94%;
+    height: 82%;
+    border-radius: 10px;
+  }
+
+  .announce-text h3 { font-size: 1.8rem; }
+  .announce-text p { font-size: 0.92rem; }
+  .anoarrows img { width: 2rem; height: 2rem; padding: 5px; }
+
+  .announce-card { padding: 0 8px; }
 }
+
+/* Optional accessibility improvement: make arrow images keyboard focusable if you render them as <img>
+   (preferable: replace <img> with <button> containing an <img> in JSX for true accessibility) */
+.anoarrows img:focus {
+  outline: 3px solid rgba(226,59,59,0.25);
+  outline-offset: 3px;
+}
+

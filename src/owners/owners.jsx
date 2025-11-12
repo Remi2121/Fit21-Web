@@ -4,36 +4,27 @@ import "./owners.css";
 import leftArrow from "../assets/leftArrow.png";
 import rightArrow from "../assets/rightArrow.png";
 import { motion } from "framer-motion";
-
-/* ✅ using your shared exports (db and storage) */
 import { db, storage } from "../firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
-
-/* use storage helpers but use the storage instance you export */
+import { collection, getDocs } from "firebase/firestore";
 import { ref as storageRef, getDownloadURL } from "firebase/storage";
 
-const ROLE_ORDER = ["Leader", "Secretary", "Treasurer","President","editing"]; // display order
+
 
 export default function Owners() {
   const transition = { type: "spring", duration: 3 };
   const [members, setMembers] = useState([]);
   const [selected, setSelected] = useState(0);
 
-  // fetch members and resolve photo URL from storage if needed
 useEffect(() => {
   (async () => {
     try {
-      const q = query(
-        collection(db, "committeeMembers"),
-        where("role", "in", ROLE_ORDER)
-      );
-      const snap = await getDocs(q);
+ 
+      const snap = await getDocs(collection(db, "committeeMembers"));
       const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
       const rowsWithUrls = await Promise.all(
         rows.map(async (r) => {
           let url = r.photoUrl || "";
-
           const looksLikeHttp = typeof url === "string" && url.startsWith("http");
           const looksLikeGs = typeof url === "string" && url.startsWith("gs://");
           const looksLikePath = typeof url === "string" && !looksLikeHttp && !looksLikeGs && url.length > 0;
@@ -55,13 +46,8 @@ useEffect(() => {
             }
           }
 
-          // ✅ DO NOT decode full download URLs
           return { ...r, photoUrl: url };
         })
-      );
-
-      rowsWithUrls.sort(
-        (a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role)
       );
 
       setMembers(rowsWithUrls);
@@ -72,7 +58,6 @@ useEffect(() => {
     }
   })();
 }, []);
-
 
   useEffect(() => {
     if (members.length > 0 && selected >= members.length) {
@@ -87,7 +72,7 @@ useEffect(() => {
       <div className="owners">
         <div className="left-o">
           <span>Team Members</span>
-          <span className="stoke-text">Top 3 Members</span>
+          <span className="stoke-text">Cruew Members</span>
           <span>Loading…</span>
         </div>
       </div>
@@ -154,7 +139,7 @@ useEffect(() => {
       {/* LEFT */}
       <div className="left-o">
         <span>Team Members</span>
-        <span className="stoke-text">Top 3 Members</span>
+        <span className="stoke-text">All Members Details</span>
         <span>Currently</span>
 
         <motion.span
@@ -167,12 +152,18 @@ useEffect(() => {
           {cur.email}
         </motion.span>
 
-        <span>
+        <motion.span
+          key={cur.id || selected}
+          initial={{ opacity: 0, x: -100 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 100 }}
+          transition={transition}
+        >
           <span style={{ color: "var(--red)", fontWeight: "bold" }}>
             {cur.name} —{" "}
           </span>
           {cur.role}
-        </span>
+         </motion.span>
       </div>
     </div>
   );

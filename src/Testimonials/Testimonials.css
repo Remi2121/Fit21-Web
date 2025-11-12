@@ -85,16 +85,121 @@
   user-select: none;
 }
 
-/* Responsive: stack on small screens */
-@media (max-width: 900px){
+/* ---- Responsive: improved mobile / tablet rules ---- */
+@media (max-width: 768px) {
   .testimonials{
-    grid-template-columns: 1fr;
-    gap: 2.5rem;
+    display: flex;
+    flex-direction: column; /* stack text + image vertically */
+    gap: 2rem;
+    padding: 2rem 1rem;
   }
-  .right-t{
-    min-height: 20rem;
+
+  /* Text column first */
+  .left-t {
+    order: 1;
+    text-align: center;
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
   }
-  .right-t .frame{ width: 14rem; height: 18rem; }
-  .right-t .bg-block{ width: 12rem; height: 16rem; top: 1.5rem; }
-  .right-t > img{ width: 16rem; height: 20rem; }
+
+  /* make nth-child selectors more explicit (span expected) */
+  .left-t > span:nth-child(1) {
+    width: 6rem;
+    height: 2rem;
+    background: white;
+    color: var(--red);
+    font-weight: bold;
+    display: inline-block;
+    padding-top: 0.25rem;
+    text-align: center;
+    border-radius: 4px;
+  }
+
+  .left-t > span:nth-child(2),
+  .left-t > span:nth-child(3) {
+    font-size: 2.2rem;
+    font-weight: 800;
+  }
+
+  /* review text: center & full width */
+  .left-t > :nth-child(4) {
+    text-transform: none;
+    text-align: center;
+    letter-spacing: 0.4px;
+    line-height: 1.6rem;
+    max-width: 90%;
+  }
+
+  /* name/status line center */
+  .left-t > span:nth-child(5) {
+    display: block;
+    text-align: center;
+    width: 100%;
+  }
+
+  /* Image column second, center contents */
+  .right-t {
+    order: 2;
+    min-height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding-top: 0.5rem;
+  }
+
+
+  .right-t .frame {
+    position: absolute;
+    inset: -0.9rem 0 auto auto;   
+    right: auto;
+    left: -1rem;
+    transform: translateX(-50%);
+    width: 14rem;
+    height: 18rem;
+    border: 2px solid red;
+    z-index: 1;
+    border-radius: 8px;
+  }
+
+  .right-t .bg-block {
+    position: absolute;
+    top: 4rem;
+    left: 3rem;
+    transform: translateX(-50%);
+    width: 13.5rem;
+    height: 16.5rem;
+    background: var(--planCard);
+    z-index: 2;
+    border-radius: 8px;
+  }
+
+  .right-t > img {
+    width: 15.5rem;
+    height: 19rem;
+    object-fit: cover;
+    z-index: 3;
+    border-radius: 12px;
+    position: relative; /* sit above the decorative layers */
+  }
+
+  /* arrows move below image, centered */
+  .arrows {
+    position: static;
+    margin-top: 1.25rem;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    left: auto;
+    bottom: auto;
+  }
+
+  .arrows img {
+    width: 2rem;
+    height: 2rem;
+  }
 }
+
