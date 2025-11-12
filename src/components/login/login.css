@@ -4,25 +4,74 @@
   align-items: center;
 }
 
-.login-box input {
+.login-popup-inputs input {
   margin: 5px;
   padding: 8px;
   border-radius: 5px;
   border: 1px solid #ccc;
+  width: 100%;
 }
 
-.login-box button {
+.login-popup-inputs button {
   background-color: #ff5722;
-  color: white;
+  color: rgb(17, 17, 17);
   border: none;
   padding: 8px 15px;
   border-radius: 5px;
   cursor: pointer;
+  margin-top: 5px;
+  width: 100%;
 }
 
 .toggle-link {
   font-size: 0.9rem;
   color: blue;
   cursor: pointer;
+  text-align: center;
+  margin-top: 10px;
 }
 
+.note {
+  color: red;
+  font-size: 0.9rem;
+  margin-top: 5px;
+  text-align: center;
+}
+
+/* Login Popup Overlay */
+.login-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.6);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.login-popup.show {
+  display: flex;
+}
+
+.login-popup-container {
+  background: white;
+  padding: 2rem;
+  border-radius: 10px;
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.login-popup-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.login-popup-title img {
+  width: 25px;
+  cursor: pointer;
+}

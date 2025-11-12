@@ -7,18 +7,18 @@ import instagram from '../../assets/instagram.png'
 const Fooder = () => {
   return (
     <div className="Footer-container">
-    <hr/>
+      <hr />
       <div className="footer">
-      <div className="social-links">
-        <img src={facebook} alt="" />
-        <img src={instagram} alt="" />
-      </div>
-      <div className="blur-f-1"></div>
-      <div className="blur-f-2"></div>
+        <div className="social-links">
+          <img src={facebook} alt="facebook" />
+          <img src={instagram} alt="instagram" />
+        </div>
+        <div className="blur-f-1"></div>
+        <div className="blur-f-2"></div>
       </div>
     </div>
-
-  )
+  );
 }
+
 
 export default Fooder

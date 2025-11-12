@@ -5,6 +5,8 @@ import { Link } from "react-router-dom";
 import emailjs from "@emailjs/browser";
 
 const Header = () => {
+ 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showContact, setShowContact] = useState(false);
   const formRef = useRef(null);
 
@@ -48,25 +50,36 @@ const Header = () => {
       <div className="header">
         <img src={Logo} alt="Fit21 Logo" className="logo" />
 
-        <ul className="header-menu">
-          <li>
-            <Link to="/">Home</Link>
-          </li>
-          <li>
-            <Link to="/exercise">Exercise</Link>
-          </li>
+          <button
+    className="hamburger"
+    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+    aria-label="Toggle menu"
+  >
+    <span className="hamburger-line"></span>
+    <span className="hamburger-line"></span>
+    <span className="hamburger-line"></span>
+  </button>
 
-          <li>
-            <Link to="/leaderboard">Leader Board</Link>
-         </li>
 
-          <li>
-            {/* 👉 like your Login Popup */}
-            <a href="#contact" onClick={(e) => { e.preventDefault(); setShowContact(true); }}>
-              Contact Us
-            </a>
-          </li>
-        </ul>
+  <ul className={`header-menu ${mobileMenuOpen ? "show" : ""}`}>
+    <li>
+      <Link to="/" onClick={() => setMobileMenuOpen(false)}>Home</Link>
+    </li>
+    <li>
+      <Link to="/exercise" onClick={() => setMobileMenuOpen(false)}>Exercise</Link>
+    </li>
+    <li>
+      <Link to="/leaderboard" onClick={() => setMobileMenuOpen(false)}>Leader Board</Link>
+    </li>
+    <li>
+      <a
+        href="#contact"
+        onClick={(e) => { e.preventDefault(); setShowContact(true); setMobileMenuOpen(false); }}
+      >
+        Contact Us
+      </a>
+    </li>
+  </ul>
       </div>
 
       {/* Contact Popup */}

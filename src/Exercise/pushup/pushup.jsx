@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { Pose, POSE_CONNECTIONS } from "@mediapipe/pose";
 import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
+import "./pushup.css"
 
 export default function PushUpCounter() {
   const videoRef = useRef(null);
@@ -151,8 +152,10 @@ export default function PushUpCounter() {
   }, []);
 
   return (
-    <div style={{ textAlign: "center", paddingTop: 20 }}>
-      <h2> Push-Up Counter</h2>
+<div className="pushup-container">
+  <h2 className="stoke-text push">Push-Up Counter</h2>
+
+  <div className="pushup-container canvas">
       <video
         ref={videoRef}
         style={{ display: "none" }}
@@ -168,9 +171,14 @@ export default function PushUpCounter() {
           borderRadius: "8px",
         }}
       />
-      <div style={{ marginTop: 10, fontSize: 18 }}>
-        <strong>Push-ups:</strong> {count} | <strong>Status:</strong> {status}
-      </div>
+
+    </div>
+
+        <div className="bt-status">
+    <span className="bt-label">Push-ups:</span> {count}
+    <span className="bt-sep" />
+    <span className="bt-label">Status:</span> {status}
+  </div>
     </div>
   );
 }

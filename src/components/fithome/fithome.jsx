@@ -4,10 +4,10 @@ import Headers from "../header/header.jsx";
 import hero_image from "../../assets/hero_image.png";
 import hero_image_back from "../../assets/hero_image_back.png";
 import { motion } from "framer-motion";
-import Login from "../login/login.jsx";
+import Login from "../login/login";
 import { useNavigate } from "react-router-dom";
 
-/* Firebase (✅ use shared instance) */
+/* Firebase */
 import { auth, db } from "../../firebase";
 import {
   onAuthStateChanged,
@@ -29,18 +29,15 @@ const Fithome = () => {
   const [showLogin, setShowLogin] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
 
-  // ---- STATES ----
   const [checkingAdmin, setCheckingAdmin] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [userEmail, setUserEmail] = useState(null);
-  const [userName, setUserName] = useState("Guest");         // 👈 username shown in greeting
+  const [userName, setUserName] = useState("Guest");
 
-  // Admin login form
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPass, setAdminPass] = useState("");
   const [loginMsg, setLoginMsg] = useState("");
 
-  // Grant new admin
   const [showAddAdminForm, setShowAddAdminForm] = useState(false);
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
@@ -50,7 +47,7 @@ const Fithome = () => {
   const navigate = useNavigate();
   const transition = { type: "spring", duration: 3 };
 
-  // close modals on ESC
+  // Close modals on ESC
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === "Escape") {
@@ -69,7 +66,6 @@ const Fithome = () => {
       setIsAdmin(false);
       setUserEmail(u?.email ?? null);
 
-      // 👇 derive a friendly name
       if (u) {
         const friendly =
           (u.displayName && u.displayName.trim()) ||
@@ -100,14 +96,12 @@ const Fithome = () => {
     return () => unsub();
   }, []);
 
-  // open admin modal
   const openAdmin = () => {
     setLoginMsg("");
     setGrantMsg("");
     setShowAdmin(true);
   };
 
-  // handle login
   const handleAdminLogin = async (e) => {
     e.preventDefault();
     setLoginMsg("");
@@ -122,7 +116,6 @@ const Fithome = () => {
     }
   };
 
-  // go to admin panel
   const goToAdmin = () => {
     if (isAdmin) {
       setShowAdmin(false);
@@ -132,7 +125,6 @@ const Fithome = () => {
     }
   };
 
-  // Grant new admin after verifying credentials
   const handleGrantAdmin = async (e) => {
     e.preventDefault();
     setGrantMsg("");
@@ -151,11 +143,9 @@ const Fithome = () => {
 
     setBusy(true);
     try {
-      // Reauthenticate admin
       const cred = EmailAuthProvider.credential(userEmail, pass);
       await reauthenticateWithCredential(auth.currentUser, cred);
 
-      // Add new admin to Firestore
       await setDoc(
         doc(db, "admins", newEmail),
         {
@@ -187,7 +177,7 @@ const Fithome = () => {
         <div className="fit-home-left">
           <Headers />
           <div className="fit-home-content">
-            <motion.div
+          <motion.div
               initial={{ left: "238px" }}
               whileInView={{ left: "8px" }}
               transition={{ ...transition, type: "tween" }}
@@ -221,13 +211,12 @@ const Fithome = () => {
         </div>
 
         <div className="fit-home-right">
-          <button className="btn" onClick={() => setShowLogin(true)}>
-            Join Now
-          </button>
+<div className="button-stack">
+  <button className="buttbtn" onClick={() => setShowLogin(true)}>Join Now</button>
+  <button className="ad-btn" onClick={openAdmin}>Admin</button>
+</div>
 
-          <button className="ad-btn" onClick={openAdmin}>
-            Admin
-          </button>
+
 
           <img src={hero_image} alt="Hero" className="fit-home-image" />
           <motion.img
@@ -262,7 +251,6 @@ const Fithome = () => {
             />
           </div>
 
-          {/* Your Firebase login form */}
           <Login onSuccess={() => setShowLogin(false)} />
         </div>
       </div>
@@ -323,7 +311,6 @@ const Fithome = () => {
             </div>
           </div>
 
-          {/* Add new admin section */}
           {isAdmin && (
             <div className="admin-section">
               <h3>Manage Admins</h3>
