@@ -168,9 +168,11 @@
 
 .fit-home-image{
     position:absolute;
-    top: 8rem;
-    right: 1rem;
-    width: 35rem;
+    top: 9rem;
+    right: 0rem;
+    min-width: 35rem;
+    height: 30rem;
+
 }
 
 .fit-home-image-back{
