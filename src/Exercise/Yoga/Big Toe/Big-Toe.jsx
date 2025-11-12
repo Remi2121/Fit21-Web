@@ -9,6 +9,10 @@ import {
   DrawingUtils,
 } from "@mediapipe/tasks-vision";
 
+// Firestore imports (assumes you export `db` from ../../../firebase)
+import { db } from "../../../firebase";
+import { doc, onSnapshot } from "firebase/firestore";
+
 /* Landmark IDs:
    Left: 11 Sh, 23 Hip, 25 Knee, 27 Ankle, 15 Wrist, 31 BigToe
    Right:12 Sh, 24 Hip, 26 Knee, 28 Ankle, 16 Wrist, 32 BigToe
@@ -23,14 +27,23 @@ export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
   const [allGoodState, setAllGoodState] = useState(false);
   const [sideUsed, setSideUsed] = useState("—");
 
+  // config loaded from Firestore (defaults provided)
+  const [config, setConfig] = useState({
+    hipAngleLimit: 80,   // default fallback
+    holdMs: holdMs,      // default fallback uses prop
+  });
+  // mirror in a ref so process() always reads the latest without re-creating effect
+  const configRef = useRef(config);
+  useEffect(() => { configRef.current = config }, [config]);
+
   // popup + stopping
   const [showDone, setShowDone] = useState(false);
   const greenSinceRef = useRef(null);
-  const badSinceRef = useRef(null);           // <-- NEW: track how long it’s bad
+  const badSinceRef = useRef(null); // track how long it’s bad
   const stoppedRef = useRef(false);
 
   // progress UI
-  const [, force] = useState(0);              // force repaint for timer text
+  const [, force] = useState(0); // force repaint for timer text
 
   // graph timestamp guard
   const lastTsRef = useRef(0);
@@ -63,6 +76,44 @@ export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
     if (Math.abs(vsL - vsR) < 0.5) return dL <= dR ? "left" : "right";
     return vsL > vsR ? "left" : "right";
   };
+
+  // -------------------------------
+  // Firestore subscription: load hipAngleLimit and holdMs (live)
+  // path: /poseRules/bigtoe  fields: hipAngleLimit, holdMs
+  // -------------------------------
+  useEffect(() => {
+    const ref = doc(db, "poseRules", "bigtoe");
+    const unsub = onSnapshot(
+      ref,
+      (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+
+          // robust parsing: allow numeric or numeric strings
+          const hipVal = typeof data.hipAngleLimit === "number"
+            ? data.hipAngleLimit
+            : (typeof data.hipAngleLimit === "string" ? Number(data.hipAngleLimit) : undefined);
+
+          const holdVal = typeof data.holdMs === "number"
+            ? data.holdMs
+            : (typeof data.holdMs === "string" ? Number(data.holdMs) : undefined);
+
+          setConfig(prev => ({
+            hipAngleLimit: Number.isFinite(hipVal) ? hipVal : prev.hipAngleLimit,
+            holdMs: Number.isFinite(holdVal) ? holdVal : prev.holdMs,
+          }));
+          console.log("Loaded config from Firestore:", { hipVal, holdVal });
+        } else {
+          console.log("poseRules/bigtoe not found — using defaults.");
+        }
+      },
+      (err) => {
+        console.error("Error listening to poseRules/bigtoe:", err);
+      }
+    );
+
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     let rafId;
@@ -215,7 +266,11 @@ export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
       const dToe  = distPx(WR, TOE, W, H);
       const dAnk  = distPx(WR, ANK, W, H);
 
-      const torsoFoldOK   = hipAngle <= 80;
+      // read live values from configRef (keeps loop stable)
+      const hipLimit = configRef.current?.hipAngleLimit ?? 80;
+      const holdMsCurrent = configRef.current?.holdMs ?? holdMs;
+
+      const torsoFoldOK = hipAngle <= hipLimit;
       const legStraightOK = kneeAngle >= 165;
       const toeOK =
         dToe <= 0.40 * legLen ||
@@ -239,7 +294,7 @@ export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
         if (!greenSinceRef.current) greenSinceRef.current = now;
         badSinceRef.current = null;
 
-        if (!stoppedRef.current && now - greenSinceRef.current >= holdMs) {
+        if (!stoppedRef.current && now - greenSinceRef.current >= holdMsCurrent) {
           stoppedRef.current = true;
           setShowDone(true);
           setStatus("completed");
@@ -249,6 +304,10 @@ export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
             v.srcObject.getTracks().forEach(t=>t.stop());
             v.srcObject = null;
           }
+
+          // optionally close landmarker to free resources (if supported)
+          try { landmarkerRef.current?.close?.(); } catch(e) {}
+          landmarkerRef.current = null;
         }
       } else {
         // only reset if "bad" lasts long enough
@@ -268,12 +327,15 @@ export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
       lastTsRef.current = 0;
 
       const v = videoRef.current;
-      if (v?.srcObject)
-        v.srcObject.getTracks().forEach(t=>t.stop());
-    };
-  }, [holdMs, badResetMs]);
+      if (v?.srcObject) v.srcObject.getTracks().forEach((t) => t.stop());
 
-  // progress seconds (for UI only)
+      // close landmarker if present
+      try { landmarkerRef.current?.close?.(); } catch(e) {}
+      landmarkerRef.current = null;
+    };
+  }, [badResetMs]); // do not include holdMs here so we don't recreate loop on config changes
+
+  // progress seconds (for UI only) — read holdMs from configRef so UI shows live value
   const progressSec = greenSinceRef.current
     ? Math.max(0, ((performance.now() - greenSinceRef.current) / 1000)).toFixed(1)
     : "0.0";
@@ -292,42 +354,40 @@ export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
         height={480}
         style={{ position: "absolute", left:"-9999px"}}
       />
-<div className="bt-stage">
-  <canvas
-    ref={canvasRef}
-    className={`bt-canvas ${allGoodState ? "good" : "bad"}`}
-    width={640}
-    height={480}
-  />
+      <div className="bt-stage">
+        <canvas
+          ref={canvasRef}
+          className={`bt-canvas ${allGoodState ? "good" : "bad"}`}
+          width={640}
+          height={480}
+        />
 
-  {/* Right column */}
-  <div className="bt-ref-plain">
-    <span className="bt-tip-plain">
-      For this pose, stand in a proper side view facing the camera.
-    </span>
-    <img src={Bigtoeimg} className="bt-pose-img" alt="ref" draggable="false" />
-  </div>
-</div>
-
-
+        {/* Right column */}
+        <div className="bt-ref-plain">
+          <span className="bt-tip-plain">
+            For this pose, stand in a proper side view facing the camera.
+          </span>
+          <img src={Bigtoeimg} className="bt-pose-img" alt="ref" draggable="false" />
+        </div>
+      </div>
 
       <div className="bt-status">
         <span className="bt-label">Side:</span> {sideUsed}
         <span className="bt-sep" />
         <span className="bt-label">Camera:</span> {status}
         <span className="bt-sep" />
-        <span className="bt-label">Hold:</span> {progressSec}s / {(holdMs/1000)|0}s
+        <span className="bt-label">Hold:</span> {progressSec}s / {((configRef.current?.holdMs ?? holdMs)/1000)|0}s
       </div>
 
       <p className="bt-note">
-        Side view only: hip ≤ 80°, knee ≥ 165°, wrist near big toe. (Small flickers won’t reset the timer.)
+        Side view only: hip ≤ {configRef.current?.hipAngleLimit ?? 80}°, knee ≥ 165°, wrist near big toe. (Small flickers won’t reset the timer.)
       </p>
 
       {showDone && (
         <div className="bt-done">
           <div className="bt-done-card">
             <h3>Great job! ✅</h3>
-            <p>You held the pose for {(holdMs/1000)|0} seconds.</p>
+            <p>You held the pose for {(((configRef.current?.holdMs ?? holdMs))/1000)|0} seconds.</p>
             <button className="resetbutton" onClick={() => window.location.reload()}>
               Restart Camera
             </button>
