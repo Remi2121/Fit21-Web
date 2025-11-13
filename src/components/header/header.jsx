@@ -1,46 +1,71 @@
+// Header.jsx
 import React, { useState, useRef, useMemo, useEffect } from "react";
 import "./header.css";
 import Logo from "../../assets/logo.png";
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import emailjs from "@emailjs/browser";
 
 const Header = () => {
- 
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showContact, setShowContact] = useState(false);
-  const formRef = useRef(null);
 
-  // pretty timestamp for the email
+  // MOBILE DROPDOWN UNDER LOGO
+  const [showLogoMenu, setShowLogoMenu] = useState(false);
+  const logoRef = useRef(null);   // the button/icon that toggles menu
+  const menuRef = useRef(null);   // the dropdown menu itself
+
+  const formRef = useRef(null);
   const nowStr = useMemo(() => new Date().toLocaleString(), []);
 
-  // ESC to close + lock body scroll when open
+  // ESC KEY CLOSE CONTACT POPUP
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && setShowContact(false);
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-  useEffect(() => {
-    if (!showContact) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
-  }, [showContact]);
 
+  // ESC CLOSE MOBILE DROPDOWN
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") setShowLogoMenu(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // CLOSE DROPDOWN WHEN CLICK OUTSIDE (supports mouse and touch)
+  useEffect(() => {
+    const onDocPointer = (e) => {
+      // if refs are not ready, ignore
+      if (!logoRef.current || !menuRef.current) return;
+      const target = e.target;
+      // if click/touch inside button or inside the menu, do nothing
+      if (logoRef.current.contains(target) || menuRef.current.contains(target)) {
+        return;
+      }
+      // otherwise close menu
+      setShowLogoMenu(false);
+    };
+
+    document.addEventListener("mousedown", onDocPointer);
+    document.addEventListener("touchstart", onDocPointer);
+    return () => {
+      document.removeEventListener("mousedown", onDocPointer);
+      document.removeEventListener("touchstart", onDocPointer);
+    };
+  }, []);
+
+  // SEND EMAIL
   const sendEmail = async (e) => {
     e.preventDefault();
     try {
-      const result = await emailjs.sendForm(
-        "service_dfb7bwm",                 // your EmailJS service ID
-        "template_3dickjd",                // your template ID
+      await emailjs.sendForm(
+        "service_dfb7bwm",
+        "template_3dickjd",
         formRef.current,
-        { publicKey: "1O9eu4fEcwq4DNk3F" } // your public key
+        { publicKey: "1O9eu4fEcwq4DNk3F" }
       );
-      console.log("SUCCESS!", result.status, result.text);
       alert("Message sent!");
       e.target.reset();
       setShowContact(false);
     } catch (err) {
-      console.error("FAILED…", err);
       alert("Sending failed. Please try again.");
     }
   };
@@ -50,39 +75,87 @@ const Header = () => {
       <div className="header">
         <img src={Logo} alt="Fit21 Logo" className="logo" />
 
+        {/* MOBILE LOGO BUTTON (DESKTOP hides via CSS) */}
+        <button
+          className="logo-btn"
+          ref={logoRef}
+          onClick={() => setShowLogoMenu(v => !v)}
+          aria-expanded={showLogoMenu}
+          aria-controls="mobile-logo-menu"
+          aria-label="Open site menu"
+        >
+          <span className={`logo-caret ${showLogoMenu ? "open" : ""}`}>▼</span>
+        </button>
+
+        {/* DESKTOP MENU (mobile hidden via CSS) */}
+        <ul className="header-menu" role="menubar" aria-label="Main navigation">
+          <li role="none">
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+              role="menuitem"
+            >
+              Home
+            </NavLink>
+          </li>
+          <li role="none">
+            <NavLink
+              to="/exercise"
+              className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+              role="menuitem"
+            >
+              Exercise
+            </NavLink>
+          </li>
+          <li role="none">
+            <NavLink
+              to="/leaderboard"
+              className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+              role="menuitem"
+            >
+              Leader Board
+            </NavLink>
+          </li>
+          <li role="none">
+            <NavLink
+              to="/attendance"
+              className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+              role="menuitem"
+            >
+              Attendance
+            </NavLink>
+          </li>
+          <li role="none">
+            <button
+              className="nav-contact"
+              onClick={() => setShowContact(true)}
+              aria-haspopup="dialog"
+            >
+              Contact Us
+            </button>
+          </li>
+        </ul>
+
+        {/* MOBILE DROPDOWN BELOW LOGO */}
+        <div
+          id="mobile-logo-menu"
+          ref={menuRef}
+          className={`logo-menu ${showLogoMenu ? "show" : ""}`}
+          role="menu"
+          aria-hidden={!showLogoMenu}
+        >
+          <NavLink to="/" end className={({ isActive }) => (isActive ? "nav-link-m active" : "nav-link-m")} onClick={() => setShowLogoMenu(false)}>Home</NavLink>
+          <NavLink to="/exercise" className={({ isActive }) => (isActive ? "nav-link-m active" : "nav-link-m")} onClick={() => setShowLogoMenu(false)}>Exercise</NavLink>
+          <NavLink to="/leaderboard" className={({ isActive }) => (isActive ? "nav-link-m active" : "nav-link-m")} onClick={() => setShowLogoMenu(false)}>Leader Board</NavLink>
+          <NavLink to="/attendance" className={({ isActive }) => (isActive ? "nav-link-m active" : "nav-link-m")} onClick={() => setShowLogoMenu(false)}>Attendance</NavLink>
           <button
-    className="hamburger"
-    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-    aria-label="Toggle menu"
-  >
-    <span className="hamburger-line"></span>
-    <span className="hamburger-line"></span>
-    <span className="hamburger-line"></span>
-  </button>
-
-
-  <ul className={`header-menu ${mobileMenuOpen ? "show" : ""}`}>
-    <li>
-      <Link to="/" onClick={() => setMobileMenuOpen(false)}>Home</Link>
-    </li>
-    <li>
-      <Link to="/exercise" onClick={() => setMobileMenuOpen(false)}>Exercise</Link>
-    </li>
-    <li>
-      <Link to="/leaderboard" onClick={() => setMobileMenuOpen(false)}>Leader Board</Link>
-    </li>
-    <li>
-      <Link to="/attendance" onClick={() => setMobileMenuOpen(false)}>Attendance</Link>
-    </li>
-    <li>
-      <a
-        href="#contact"
-        onClick={(e) => { e.preventDefault(); setShowContact(true); setMobileMenuOpen(false); }}
-      >
-        Contact Us
-      </a>
-    </li>
-  </ul>
+            className="logo-menu-contact"
+            onClick={() => { setShowContact(true); setShowLogoMenu(false); }}
+          >
+            Contact Us
+          </button>
+        </div>
       </div>
 
       {/* Contact Popup */}
@@ -90,6 +163,7 @@ const Header = () => {
         className={`contact-popup ${showContact ? "show" : ""}`}
         role="dialog"
         aria-modal="true"
+        aria-labelledby="contact-title"
         onClick={() => setShowContact(false)}        /* close on backdrop */
       >
         <div
@@ -98,8 +172,14 @@ const Header = () => {
           role="document"
         >
           <div className="contact-popup-title">
-            <span className="stoke-text">Contact Us • Get in Touch</span>
-            
+            <span id="contact-title" className="stoke-text">Contact Us • Get in Touch</span>
+            <button
+              onClick={() => setShowContact(false)}
+              aria-label="Close contact form"
+              style={{ background: "transparent", border: "none", color: "#fff", cursor: "pointer" }}
+            >
+              ✕
+            </button>
           </div>
 
           <p className="contact-popup-sub">

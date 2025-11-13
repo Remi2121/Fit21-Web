@@ -1,13 +1,15 @@
 :root{
-  --header-h: 80px;      /* desktop header height */
-  --menu-left-nudge: -2rem; /* fine-tune the menu a bit to the left */
+  --header-h: 80px;
+  --menu-left-nudge: -2rem;
+  --red: #bd3951;
 }
 
+/* responsive tweaks */
 @media (max-width: 768px){
   :root{ --header-h: 64px; --menu-left-nudge: -1rem; }
 }
 
-/* Fixed header bar */
+/* HEADER BAR */
 .header{
   position: absolute;
   top: 0; left: 0; width: 100%;
@@ -15,25 +17,26 @@
   z-index: 1000;
   display: flex;
   align-items: center;
-  justify-content: center;     /* centers the menu block */
+  justify-content: center;
   padding: 0 24px;
   background: rgba(0,0,0,0.4);
   border-bottom: 1px solid rgba(255,255,255,0.25);
   backdrop-filter: saturate(140%) blur(6px);
 }
 
-/* Logo pinned left, doesn't affect menu centering */
+/* LOGO (for desktop only — mobile overrides below) */
 .logo{
   position: absolute;
   left: 24px;
   top: 50%;
   transform: translateY(-50%);
   width: 10rem;
-  height: 13rem;
+  height: auto;
   object-fit: contain;
+  pointer-events: none; /* ensures logo doesn't accidentally capture taps */
 }
 
-/* Centered menu (nudged slightly left) */
+/* DESKTOP MENU */
 .header-menu{
   list-style: none;
   display: flex;
@@ -41,29 +44,188 @@
   margin: 0;
   padding: 0;
   position: relative;
-  left: var(--menu-left-nudge); /* move a bit to left */
+  left: var(--menu-left-nudge);
+  align-items: center;
 }
 
-.header-menu a{
-  text-decoration: none;
+/* Desktop nav link base */
+.nav-link {
   color: #fff;
+  text-decoration: none;
   font-weight: 600;
   font-size: 1rem;
-  transition: color .25s ease, transform .15s ease;
+  transition: color 150ms ease, transform 150ms ease;
+  display: inline-block;
+  padding: 6px 4px;
 }
 
-.header-menu a:hover,
-.header-menu a:focus{
+/* Desktop hover -> red (optional) */
+.nav-link:hover {
   color: var(--red);
-  outline: none;
+  transform: translateY(-1px);
 }
 
+/* Active desktop link (current page) */
+.nav-link.active {
+  color: var(--red) !important;
+}
+
+/* small li hover effect */
 .header-menu li:hover{
   transform: translateY(-1px);
 }
 
-.header, .header *{ color: #fff; }
+/* Contact button style in desktop menu */
+.nav-contact {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+.nav-contact:hover {
+  color: var(--red);
+  transform: translateY(-1px);
+}
 
+/* ---------- MOBILE DROPDOWN BUTTON ---------- */
+
+.logo-btn{
+  display: none; /* hidden on desktop */
+  background:  transparent;
+  border: none;
+  cursor: pointer;
+  position: absolute;
+  left: 8px;
+  top: 60%;
+  transform: translateY(-50%);
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.logo-btn:focus { outline: 2px solid rgba(255,255,255,0.08); }
+
+.logo-caret{
+  font-size: 1.2rem;
+  color: white;
+  transition: transform .2s ease;
+}
+.logo-caret.open{
+  transform: rotate(180deg);
+}
+
+/* ---------- MOBILE DROPDOWN MENU ---------- */
+
+.logo-menu{
+  display: none;
+  position: absolute;
+  top: calc(var(--header-h) + 6px);
+  left: 8px;
+  width: 220px;
+  background: #111;
+  padding: 10px;
+  border-radius: 10px;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 3000; /* higher than header to prevent overlap */
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.logo-menu.show{
+  display: flex;
+}
+
+/* make each mobile link a block so the entire row is tappable */
+.nav-link-m{
+  display: block;
+  color: #fff;
+  text-decoration: none;
+  padding: 10px;
+  background: #1b1b1b;
+  border-radius: 8px;
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+  font-weight: 600;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: color 140ms ease, background 140ms ease;
+}
+
+.nav-link-m:hover {
+  color: var(--red);
+}
+
+/* Active mobile link */
+.nav-link-m.active {
+  color: var(--red) !important;
+  background: #1b1b1b;
+}
+
+/* Mobile contact button */
+.logo-menu-contact {
+  background: #1b1b1b;
+  border: none;
+  padding: 10px;
+  width: 100%;
+  text-align: left;
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 1rem;
+  display: block;
+  font-weight: 600;
+}
+.logo-menu-contact:hover{
+  background: #1b1b1b;
+  color: var(--red) !important;
+}
+
+/* ---------- MOBILE RULES ---------- */
+@media (max-width: 768px){
+
+  /* Replace desktop logo */
+  .logo{
+    width: 8rem;
+    left: 8px;
+  }
+
+  /* Show mobile logo button */
+  .logo-btn{
+    display: flex;
+  }
+
+  /* Hide desktop menu */
+  .header-menu{
+    display: none !important;
+  }
+}
+
+/* ---------- DESKTOP RULES ---------- */
+@media (min-width: 769px){
+
+  /* Hide mobile-specific UI */
+  .logo-btn,
+  .logo-caret,
+  .logo-menu{
+    display: none !important;
+  }
+
+  /* Keep desktop layout as is */
+  .header-menu{
+    display: flex !important;
+  }
+}
+
+/* ------------------ CONTACT POPUP ------------------ */
 
 .contact-popup{
   position: fixed;
@@ -72,7 +234,7 @@
   align-items: center;
   justify-content: center;
   background: rgba(0,0,0,0.45);
-  z-index: 2000;                 /* above header */
+  z-index: 4000;                 /* above header + menu */
   padding: 16px;                 /* mobile safe */
 }
 .contact-popup.show{ display: flex; }
@@ -135,91 +297,19 @@
 }
 .contact-form--popup input:focus,
 .contact-form--popup textarea:focus{
-  border-color: var(--red, #bd3951);
+  border-color: var(--red);
 }
 .btn-contact-btn{
   padding: 12px 10px;
   border: 0;
   border-radius: 10px;
-  background: var(--red, #bd3951);
+  background: var(--red);
   color: #fff;
   font-weight: 400;
   cursor: pointer;
 }
 
-
 @keyframes contactPop {
   from { transform: translateY(12px); opacity: 0; }
   to   { transform: translateY(0);    opacity: 1; }
-}
-
-
-.hamburger {
-  display: none;
-  flex-direction: column;
-  justify-content: space-around;
-  width: 28px;
-  height: 24px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  position: absolute;
-  right: 16rem;
-  top: 3.5rem;
-  transform: translateY(-50%);
-  z-index: 1100;
-}
-
-.hamburger-line {
-  width: 100%;
-  height: 3px;
-  background-color: #fff;
-  border-radius: 2px;
-}
-
-/* Mobile styles */
-@media (max-width: 768px) {
-
-  .header{
-    height: 5rem;
-  }
-  .logo{
-  position: absolute;
-  left: 5px;
-  top: 1.5rem;
-  transform: translateY(-50%);
-  width: 8rem;
-  height: 8rem;
-  object-fit: contain;
-}
-  .hamburger {
-    display: flex;
-  }
-
-  /* Hide menu by default */
-  .header-menu {
-    display: none;
-    flex-direction: column;
-    position: absolute;
-    top: var(--header-h);
-    right: 1rem;
-    left: 1rem;
-    width: 22rem;
-    background: #111;
-    padding: 1rem 0;
-    gap: 1rem;
-    text-align: center;
-    z-index: 1000;
-  }
-
-  /* Show menu when hamburger clicked */
-  .header-menu.show {
-    display: flex;
-  }
-
-  .header-menu li a {
-    font-size: 1.1rem;
-    padding: 0.5rem 0;
-    display: block;
-  }
 }

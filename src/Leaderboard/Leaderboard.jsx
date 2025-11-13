@@ -64,7 +64,7 @@ export default function LeaderBoard() {
 
           <div className="panel-actions">
             <button className="back-btn" onClick={() => (window.location.href = "/")}>
-              ← Back to Home
+              Back to Home
             </button>
           </div>
         </div>
