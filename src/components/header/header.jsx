@@ -1,7 +1,8 @@
+// Header.jsx
 import React, { useState, useRef, useMemo, useEffect } from "react";
 import "./header.css";
 import Logo from "../../assets/logo.png";
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import emailjs from "@emailjs/browser";
 
 const Header = () => {
@@ -81,20 +82,58 @@ const Header = () => {
           onClick={() => setShowLogoMenu(v => !v)}
           aria-expanded={showLogoMenu}
           aria-controls="mobile-logo-menu"
+          aria-label="Open site menu"
         >
           <span className={`logo-caret ${showLogoMenu ? "open" : ""}`}>▼</span>
         </button>
 
         {/* DESKTOP MENU (mobile hidden via CSS) */}
-        <ul className="header-menu">
-          <li><Link to="/">Home</Link></li>
-          <li><Link to="/exercise">Exercise</Link></li>
-          <li><Link to="/leaderboard">Leader Board</Link></li>
-          <li><Link to="/attendance">Attendance</Link></li>
-          <li>
-            <a href="#contact" onClick={(e) => { e.preventDefault(); setShowContact(true); }}>
+        <ul className="header-menu" role="menubar" aria-label="Main navigation">
+          <li role="none">
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+              role="menuitem"
+            >
+              Home
+            </NavLink>
+          </li>
+          <li role="none">
+            <NavLink
+              to="/exercise"
+              className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+              role="menuitem"
+            >
+              Exercise
+            </NavLink>
+          </li>
+          <li role="none">
+            <NavLink
+              to="/leaderboard"
+              className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+              role="menuitem"
+            >
+              Leader Board
+            </NavLink>
+          </li>
+          <li role="none">
+            <NavLink
+              to="/attendance"
+              className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+              role="menuitem"
+            >
+              Attendance
+            </NavLink>
+          </li>
+          <li role="none">
+            <button
+              className="nav-contact"
+              onClick={() => setShowContact(true)}
+              aria-haspopup="dialog"
+            >
               Contact Us
-            </a>
+            </button>
           </li>
         </ul>
 
@@ -104,11 +143,12 @@ const Header = () => {
           ref={menuRef}
           className={`logo-menu ${showLogoMenu ? "show" : ""}`}
           role="menu"
+          aria-hidden={!showLogoMenu}
         >
-          <Link to="/" onClick={() => setShowLogoMenu(false)}>Home</Link>
-          <Link to="/exercise" onClick={() => setShowLogoMenu(false)}>Exercise</Link>
-          <Link to="/leaderboard" onClick={() => setShowLogoMenu(false)}>Leader Board</Link>
-          <Link to="/attendance" onClick={() => setShowLogoMenu(false)}>Attendance</Link>
+          <NavLink to="/" end className={({ isActive }) => (isActive ? "nav-link-m active" : "nav-link-m")} onClick={() => setShowLogoMenu(false)}>Home</NavLink>
+          <NavLink to="/exercise" className={({ isActive }) => (isActive ? "nav-link-m active" : "nav-link-m")} onClick={() => setShowLogoMenu(false)}>Exercise</NavLink>
+          <NavLink to="/leaderboard" className={({ isActive }) => (isActive ? "nav-link-m active" : "nav-link-m")} onClick={() => setShowLogoMenu(false)}>Leader Board</NavLink>
+          <NavLink to="/attendance" className={({ isActive }) => (isActive ? "nav-link-m active" : "nav-link-m")} onClick={() => setShowLogoMenu(false)}>Attendance</NavLink>
           <button
             className="logo-menu-contact"
             onClick={() => { setShowContact(true); setShowLogoMenu(false); }}
@@ -123,6 +163,7 @@ const Header = () => {
         className={`contact-popup ${showContact ? "show" : ""}`}
         role="dialog"
         aria-modal="true"
+        aria-labelledby="contact-title"
         onClick={() => setShowContact(false)}        /* close on backdrop */
       >
         <div
@@ -131,7 +172,14 @@ const Header = () => {
           role="document"
         >
           <div className="contact-popup-title">
-            <span className="stoke-text">Contact Us • Get in Touch</span>
+            <span id="contact-title" className="stoke-text">Contact Us • Get in Touch</span>
+            <button
+              onClick={() => setShowContact(false)}
+              aria-label="Close contact form"
+              style={{ background: "transparent", border: "none", color: "#fff", cursor: "pointer" }}
+            >
+              ✕
+            </button>
           </div>
 
           <p className="contact-popup-sub">

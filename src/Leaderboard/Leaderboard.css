@@ -124,6 +124,7 @@
     max-width: 900px !important;
     max-height: calc(100vh - var(--header-h, 80px) - 28px) !important;
     border-radius: 12px !important;
+    justify-content: center;
   }
 
   .panel-title h1{ font-size: 1.25rem !important; }
@@ -157,7 +158,7 @@
 
   /* explicit column width distribution so Rank stays visible */
   .leaderboard-table th:nth-child(1),
-  .leaderboard-table td:nth-child(1) { width: 18% !important; }  /* Rank */
+  .leaderboard-table td:nth-child(1) { width: 10% !important; }  /* Rank */
   .leaderboard-table th:nth-child(2),
   .leaderboard-table td:nth-child(2) { width: 54% !important; }  /* Player */
   .leaderboard-table th:nth-child(3),

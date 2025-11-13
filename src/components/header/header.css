@@ -45,16 +45,49 @@
   padding: 0;
   position: relative;
   left: var(--menu-left-nudge);
+  align-items: center;
 }
 
-.header-menu a{
-  text-decoration: none;
+/* Desktop nav link base */
+.nav-link {
   color: #fff;
+  text-decoration: none;
   font-weight: 600;
   font-size: 1rem;
+  transition: color 150ms ease, transform 150ms ease;
+  display: inline-block;
+  padding: 6px 4px;
 }
 
+/* Desktop hover -> red (optional) */
+.nav-link:hover {
+  color: var(--red);
+  transform: translateY(-1px);
+}
+
+/* Active desktop link (current page) */
+.nav-link.active {
+  color: var(--red) !important;
+}
+
+/* small li hover effect */
 .header-menu li:hover{
+  transform: translateY(-1px);
+}
+
+/* Contact button style in desktop menu */
+.nav-contact {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+.nav-contact:hover {
+  color: var(--red);
   transform: translateY(-1px);
 }
 
@@ -94,7 +127,7 @@
   position: absolute;
   top: calc(var(--header-h) + 6px);
   left: 8px;
-  width: 190px;
+  width: 220px;
   background: #111;
   padding: 10px;
   border-radius: 10px;
@@ -110,7 +143,7 @@
 }
 
 /* make each mobile link a block so the entire row is tappable */
-.logo-menu a{
+.nav-link-m{
   display: block;
   color: #fff;
   text-decoration: none;
@@ -123,13 +156,20 @@
   font-weight: 600;
   user-select: none;
   -webkit-user-select: none;
+  transition: color 140ms ease, background 140ms ease;
 }
 
-.logo-menu a:hover,
-.logo-menu-contact:hover{
-  background: var(--red);
+.nav-link-m:hover {
+  color: var(--red);
 }
 
+/* Active mobile link */
+.nav-link-m.active {
+  color: var(--red) !important;
+  background: #1b1b1b;
+}
+
+/* Mobile contact button */
 .logo-menu-contact {
   background: #1b1b1b;
   border: none;
@@ -143,6 +183,10 @@
   font-size: 1rem;
   display: block;
   font-weight: 600;
+}
+.logo-menu-contact:hover{
+  background: #1b1b1b;
+  color: var(--red) !important;
 }
 
 /* ---------- MOBILE RULES ---------- */
