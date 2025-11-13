@@ -72,6 +72,9 @@ const Header = () => {
       <Link to="/leaderboard" onClick={() => setMobileMenuOpen(false)}>Leader Board</Link>
     </li>
     <li>
+      <Link to="/attendance" onClick={() => setMobileMenuOpen(false)}>Attendance</Link>
+    </li>
+    <li>
       <a
         href="#contact"
         onClick={(e) => { e.preventDefault(); setShowContact(true); setMobileMenuOpen(false); }}
