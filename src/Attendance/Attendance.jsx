@@ -201,8 +201,10 @@ const Attendance = () => {
   };
 
   return (
+     <>
+    <Headers />
     <div className="attendance-container">
-      <Headers />
+      
       <div className="attendance-card">
         <h2 className="att-heading">Daily Attendance</h2>
 
@@ -264,6 +266,7 @@ const Attendance = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 
