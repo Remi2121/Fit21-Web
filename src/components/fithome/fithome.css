@@ -6,7 +6,6 @@
   position: relative;     /* anchor absolutely-positioned children */
   isolation: isolate;            /* mobile-safe fullscreen */
 }
-/*background: linear-gradient(135deg, #720303, #000000);*/
 /* Left */
 .fit-home-left{
   flex:3;
@@ -271,10 +270,7 @@
   text-align: center;
 }
 
-
-
-
- /* popup base (reuse your login-popup style if you want) */
+/* Admin popup */
 .admin-popup {
   position: fixed; inset: 0;
   background: rgba(0,0,0,.6);
@@ -305,6 +301,54 @@
 .note{ margin: 8px 0 0; font-size:.9rem; opacity:.9; }
 .warn{ margin: 8px 0 0; color:#ffb4b4; font-size:.9rem; }
 
+
+/* LOGIN PROMPT (center-bottom) */
+.login-prompt {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 15px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  z-index: 9999;
+}
+.login-prompt.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+.login-prompt-inner { font-weight: 500; }
+
+/* APP TOAST */
+.app-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  background: rgba(20,20,20,0.95);
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  transform: translateY(-8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 10000;
+  max-width: 320px;
+  font-weight: 500;
+}
+.app-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
 
 /* ----------------- Responsive ----------------- */
 @media (max-width: 992px){
@@ -467,5 +511,3 @@
     font-size: 0.85rem;
   }
 }
-
-

@@ -49,7 +49,7 @@ const saveUserToFirestore = async (user) => {
   if (!user) return;
 
   try {
-    const userRef = doc(db, "users", user.uid); // <-- FIXED HERE
+    const userRef = doc(db, "users", user.uid);
     await setDoc(
       userRef,
       {
@@ -67,12 +67,34 @@ const saveUserToFirestore = async (user) => {
 
 /* -------------------- ATTENDANCE COMPONENT -------------------- */
 const Attendance = () => {
-  const [status, setStatus] = useState("checking");
+  const [status, setStatus] = useState("checking"); // checking | not-signed-in | loaded | failed
   const [user, setUser] = useState(null);
   const [tableRows, setTableRows] = useState([]);
   const [loadingTable, setLoadingTable] = useState(false);
 
-  const START_DATE = "2025-10-10";
+  // progress
+  const [loadedCount, setLoadedCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+
+  // default fallback start date (used if settings doc missing)
+  const FALLBACK_START_DATE = "2025-10-10";
+
+  // fetch start date from Firestore settings/attendance
+  const fetchStartDate = async () => {
+    try {
+      const settingsRef = doc(db, "settings", "attendance");
+      const snap = await getDoc(settingsRef);
+      if (snap && snap.exists()) {
+        const data = snap.data();
+        return data.startingDate || data.startDate || FALLBACK_START_DATE;
+      } else {
+        return FALLBACK_START_DATE;
+      }
+    } catch (err) {
+      console.error("fetchStartDate error:", err);
+      return FALLBACK_START_DATE;
+    }
+  };
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -90,28 +112,18 @@ const Attendance = () => {
         /* Save user profile */
         await saveUserToFirestore(u);
 
-        /* Mark today's attendance */
-        const uid = u.uid;
-        const today = getTodayYYYYMMDD();
-        const attRef = doc(db, "users", uid, "attendance", today);
+        /* Get start date from settings => settings/attendance.startingDate */
+        const startDateFromSettings = await fetchStartDate();
 
-        const snap = await getDoc(attRef);
+        // Build attendance table (only this user's attendance)
+        await buildAttendanceTable(
+          u.uid,
+          u.displayName || "No name",
+          u.email || null,
+          startDateFromSettings
+        );
 
-        if (!snap.exists()) {
-          await setDoc(attRef, {
-            userId: uid,
-            date: today,
-            markedAt: serverTimestamp(),
-            userName: u.displayName || null,
-            email: u.email || null,
-          });
-        }
-
-        setStatus("marked");
-
-        // Build attendance table
-        await buildAttendanceTable(uid, u.displayName || "No name", u.email || null, START_DATE);
-
+        setStatus("loaded");
       } catch (err) {
         console.error("Attendance error:", err);
         setStatus("failed");
@@ -121,8 +133,16 @@ const Attendance = () => {
     return () => unsub();
   }, []);
 
+  /**
+   * Build table incrementally and update UI every row.
+   * This version does NOT show a blocking overlay.
+   * If the range is huge, consider batching updates (every N rows) to improve perf.
+   */
   const buildAttendanceTable = async (uid, userName, userEmail, startDateStr) => {
     setLoadingTable(true);
+    setTableRows([]);
+    setLoadedCount(0);
+    setTotalCount(0);
 
     try {
       const todayStr = getTodayYYYYMMDD();
@@ -136,25 +156,28 @@ const Attendance = () => {
       }
 
       const days = Math.ceil((today - start) / (1000 * 60 * 60 * 24)) + 1;
-      const rows = [];
       const MAX_DAYS = 1000;
-
       const loopDays = Math.min(days, MAX_DAYS);
 
+      setTotalCount(loopDays);
+
+      // Build rows incrementally; update state each iteration so rows appear as they load
+      const rows = [];
       for (let i = 0; i < loopDays; i++) {
         const d = addDays(start, i);
         const dateStr = formatYYYYMMDD(d);
 
         const attDocRef = doc(db, "users", uid, "attendance", dateStr);
         let attSnap;
+        let attended = false;
 
         try {
           attSnap = await getDoc(attDocRef);
+          attended = attSnap && attSnap.exists();
         } catch (err) {
           console.warn("Error fetching attendance for", dateStr, err);
+          attended = false;
         }
-
-        const attended = attSnap && attSnap.exists();
 
         rows.push({
           day: i + 1,
@@ -163,9 +186,12 @@ const Attendance = () => {
           userEmail,
           attended,
         });
-      }
 
-      setTableRows(rows);
+        // immediate UI update (one row at a time)
+        setTableRows([...rows]);
+        setLoadedCount(i + 1);
+        // no delay — Firestore getDoc is the main IO; rows appear as IO completes
+      }
 
     } catch (err) {
       console.error("buildAttendanceTable error:", err);
@@ -180,11 +206,11 @@ const Attendance = () => {
       <div className="attendance-card">
         <h2 className="att-heading">Daily Attendance</h2>
 
-        {status === "checking" && <p className="att-status">Checking attendance…</p>}
-        {status === "not-signed-in" && <p className="att-status">Please sign in to mark attendance.</p>}
-        {status === "marked" && <p className="att-status success">Attendance marked for today ✅</p>}
+        {status === "checking" && <p className="att-status">Loading attendance…</p>}
+        {status === "not-signed-in" && <p className="att-status">Please sign in to view your attendance.</p>}
+        {status === "loaded" && <p className="att-status success">Your attendance list below</p>}
         {status === "failed" && (
-          <p className="att-status error">Could not mark attendance. Try again later.</p>
+          <p className="att-status error">Could not load attendance. Try again later.</p>
         )}
 
         {user && (
@@ -198,12 +224,17 @@ const Attendance = () => {
         <div style={{ marginTop: 20 }}>
           <h3 style={{ marginBottom: 10 }}>Attendance List</h3>
 
-          {loadingTable ? (
-            <p>Loading table…</p>
-          ) : tableRows.length === 0 ? (
+          {/* Inline small progress bar/text above the table (non-blocking) */}
+          {loadingTable && (
+            <div className="attendance-inline-progress">
+              Loading attendance — {loadedCount} / {totalCount}
+            </div>
+          )}
+
+          {tableRows.length === 0 && !loadingTable ? (
             <p>No dates in range or not signed in.</p>
           ) : (
-            <div className="attendance-table-wrap centered">
+            <div className="attendance-table-wrap centered black-brown">
               <table className="attendance-table">
                 <thead>
                   <tr>
