@@ -6,7 +6,7 @@
   position: relative;     /* anchor absolutely-positioned children */
   isolation: isolate;            /* mobile-safe fullscreen */
 }
-
+/*background: linear-gradient(135deg, #720303, #000000);*/
 /* Left */
 .fit-home-left{
   flex:3;

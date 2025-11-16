@@ -216,8 +216,6 @@ const Fithome = () => {
   <button className="ad-btn" onClick={openAdmin}>Admin</button>
 </div>
 
-
-
           <img src={hero_image} alt="Hero" className="fit-home-image" />
           <motion.img
             initial={{ right: "11rem" }}
