@@ -5,39 +5,56 @@
   --stroke: rgba(255,255,255,0.18);
   --text: #ffffff;
   --accent: #ff4b5c;
-
-  /* default top height for the sticky top block.
-     Adjust this if you change padding/font sizes in the top area. */
-  --card-top-h: 220px;
+ --header-h: 80px; 
 }
 
-/* ---------- PAGE BACKGROUND ---------- */
+@media (max-width:768px){
+  :root{ --header-h: 64px; }
+}
+
+/* ------------------ REPLACE .attendance-container WITH THIS ------------------ */
 .attendance-container {
-  width: 100%;
-  min-height: 100vh;
-  padding: 0;
-  margin: 0;
-  padding-top: 3rem;
+  position: fixed;             /* needed so top/left/right/bottom work */
+  top: var(--header-h);        /* sit immediately below your header */
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  /* center horizontally, but keep card near top */
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
 
+  /* spacing between top of container and card */
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+  margin: 0;
+
+  /* background */
   background:
     radial-gradient(1200px 700px at 20% 0%, #790505 0%, transparent 60%),
     linear-gradient(135deg, var(--bg1), var(--bg2));
-
   background-attachment: fixed;
+
   color: white;
   font-family: "Poppins", sans-serif;
+   overflow: auto;
 
-  
-  /* IMPORTANT: limit height to viewport so internal scrolling works */
-  max-height: calc(100vh - 120px); /* tune 120px as needed for navbar */
-  overflow: hidden; /* prevents page-level scroll for card content */
+  /* remove previous min-height/max-height so fixed sizing is used */
+  min-height: auto;
+  max-height: none;
+  box-sizing: border-box;
+  z-index: 999; /* keep under header if header z-index is higher */
 }
 
+ 
 /* ---------- CARD ---------- */
 .attendance-card {
+
+    margin-top: 2px;        /* small gap below the header */
+  align-self: flex-start; /* ensures card starts near the top of the container */
+  width: 90%;
+  max-width: 900px;
   position: relative; /* needed for sticky children */
   background: rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(12px);

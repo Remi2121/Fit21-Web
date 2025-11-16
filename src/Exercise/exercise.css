@@ -25,11 +25,8 @@
   background:
     radial-gradient(1200px 700px at 20% 0%, #790505 0%, transparent 60%),
     linear-gradient(135deg, var(--bg1), var(--bg2));
-
-  /* spacing inside the viewport */
   padding: 24px clamp(16px, 3vw, 32px) clamp(16px, 3vw, 32px);
-
-  overflow: hidden;                              /* ❌ no window scroll */
+  overflow: hidden;                              
   z-index: 0;                                    /* sit below fixed header */
 }
 
@@ -39,8 +36,7 @@
   height: calc(100% - 15px);                     /* fit inside container */
   display: flex;
   flex-direction: column;
-  overflow: hidden;                               /* clip inner outlines */
-
+  overflow: hidden;                             
   backdrop-filter: blur(14px);
   background:
     radial-gradient(1200px 700px at 20% 0%, #000 0%, transparent 60%),
