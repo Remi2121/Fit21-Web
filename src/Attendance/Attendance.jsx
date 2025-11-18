@@ -1,48 +1,17 @@
-// Attendance.jsx
 import React, { useEffect, useState } from "react";
 import { auth, db } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   doc,
-  getDoc,
   setDoc,
   serverTimestamp,
+  collection,
+  getDocs,
+  query,
+  orderBy,
 } from "firebase/firestore";
 import "./Attendance.css";
 import Headers from "../components/header/header";
-
-/* -------------------- DATE HELPERS -------------------- */
-function getTodayYYYYMMDD(timeZone = "Asia/Colombo") {
-  const now = new Date();
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(now);
-
-  const map = {};
-  parts.forEach((p) => (map[p.type] = p.value));
-  return `${map.year}-${map.month}-${map.day}`;
-}
-
-function formatYYYYMMDD(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
-function parseYYYYMMDD(yyyyMmDd) {
-  const [y, m, d] = yyyyMmDd.split("-");
-  return new Date(Number(y), Number(m) - 1, Number(d));
-}
-
-function addDays(date, n) {
-  const d = new Date(date);
-  d.setDate(d.getDate() + n);
-  return d;
-}
 
 /* -------------------- SAVE USER FIRESTORE (profile -> users/{uid}) -------------------- */
 const saveUserToFirestore = async (user) => {
@@ -76,32 +45,14 @@ const Attendance = () => {
   const [loadedCount, setLoadedCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
 
-  // default fallback start date (used if settings doc missing)
-  const FALLBACK_START_DATE = "2025-10-10";
-
-  // fetch start date from Firestore settings/attendance
-  const fetchStartDate = async () => {
-    try {
-      const settingsRef = doc(db, "settings", "attendance");
-      const snap = await getDoc(settingsRef);
-      if (snap && snap.exists()) {
-        const data = snap.data();
-        return data.startingDate || data.startDate || FALLBACK_START_DATE;
-      } else {
-        return FALLBACK_START_DATE;
-      }
-    } catch (err) {
-      console.error("fetchStartDate error:", err);
-      return FALLBACK_START_DATE;
-    }
-  };
-
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) {
         setUser(null);
         setStatus("not-signed-in");
         setTableRows([]);
+        setLoadedCount(0);
+        setTotalCount(0);
         return;
       }
 
@@ -109,20 +60,8 @@ const Attendance = () => {
       setStatus("checking");
 
       try {
-        /* Save user profile */
         await saveUserToFirestore(u);
-
-        /* Get start date from settings => settings/attendance.startingDate */
-        const startDateFromSettings = await fetchStartDate();
-
-        // Build attendance table (only this user's attendance)
-        await buildAttendanceTable(
-          u.uid,
-          u.displayName || "No name",
-          u.email || null,
-          startDateFromSettings
-        );
-
+        await buildAttendanceTable(u.uid, u.displayName || "No name", u.email || null);
         setStatus("loaded");
       } catch (err) {
         console.error("Attendance error:", err);
@@ -133,66 +72,66 @@ const Attendance = () => {
     return () => unsub();
   }, []);
 
-  /**
-   * Build table incrementally and update UI every row.
-   * This version does NOT show a blocking overlay.
-   * If the range is huge, consider batching updates (every N rows) to improve perf.
-   */
-  const buildAttendanceTable = async (uid, userName, userEmail, startDateStr) => {
+  const buildAttendanceTable = async (uid, userName, userEmail) => {
     setLoadingTable(true);
     setTableRows([]);
     setLoadedCount(0);
     setTotalCount(0);
 
     try {
-      const todayStr = getTodayYYYYMMDD();
-      const start = parseYYYYMMDD(startDateStr);
-      const today = parseYYYYMMDD(todayStr);
+      const attColRef = collection(db, "users", uid, "attendance");
+      const q = query(attColRef, orderBy("date", "asc"));
+      const snap = await getDocs(q);
 
-      if (start > today) {
-        setTableRows([]);
-        setLoadingTable(false);
-        return;
+      let docs = snap.docs;
+      if (docs.length === 0) {
+        const snap2 = await getDocs(attColRef);
+        docs = snap2.docs;
       }
 
-      const days = Math.ceil((today - start) / (1000 * 60 * 60 * 24)) + 1;
-      const MAX_DAYS = 1000;
-      const loopDays = Math.min(days, MAX_DAYS);
+      const rows = docs.map((docSnap) => {
+        const data = docSnap.data() || {};
 
-      setTotalCount(loopDays);
-
-      // Build rows incrementally; update state each iteration so rows appear as they load
-      const rows = [];
-      for (let i = 0; i < loopDays; i++) {
-        const d = addDays(start, i);
-        const dateStr = formatYYYYMMDD(d);
-
-        const attDocRef = doc(db, "users", uid, "attendance", dateStr);
-        let attSnap;
-        let attended = false;
-
-        try {
-          attSnap = await getDoc(attDocRef);
-          attended = attSnap && attSnap.exists();
-        } catch (err) {
-          console.warn("Error fetching attendance for", dateStr, err);
-          attended = false;
+        let rawDate = null;
+        if (data.date && typeof data.date.toDate === "function") {
+          rawDate = data.date.toDate();
+        } else if (typeof data.date === "string" && data.date.trim()) {
+          const parsed = new Date(data.date);
+          if (!isNaN(parsed.getTime())) rawDate = parsed;
+        } else {
+          const id = docSnap.id;
+          const parsedId = new Date(id);
+          if (!isNaN(parsedId.getTime())) rawDate = parsedId;
         }
 
-        rows.push({
-          day: i + 1,
-          date: dateStr,
+        const displayDate = rawDate ? rawDate.toLocaleString() : (data.date || docSnap.id || "");
+
+        const presentFlag = Object.prototype.hasOwnProperty.call(data, "present")
+          ? !!data.present
+          : true;
+
+        return {
+          id: docSnap.id,
+          dateRaw: rawDate,
+          date: displayDate,
           userName,
           userEmail,
-          attended,
-        });
+          attended: presentFlag,
+        };
+      });
 
-        // immediate UI update (one row at a time)
-        setTableRows([...rows]);
-        setLoadedCount(i + 1);
-        // no delay — Firestore getDoc is the main IO; rows appear as IO completes
-      }
+      rows.sort((a, b) => {
+        if (a.dateRaw && b.dateRaw) return a.dateRaw.getTime() - b.dateRaw.getTime();
+        if (a.dateRaw && !b.dateRaw) return -1;
+        if (!a.dateRaw && b.dateRaw) return 1;
+        return a.id.localeCompare(b.id);
+      });
 
+      const numbered = rows.map((r, i) => ({ ...r, day: i + 1 }));
+
+      setTableRows(numbered);
+      setLoadedCount(numbered.length);
+      setTotalCount(numbered.length);
     } catch (err) {
       console.error("buildAttendanceTable error:", err);
     } finally {
@@ -201,71 +140,83 @@ const Attendance = () => {
   };
 
   return (
-     <>
-    <Headers />
-    <div className="attendance-container">
-      
-      <div className="attendance-card">
-        <h2 className="att-heading">Daily Attendance</h2>
-
-        {status === "checking" && <p className="att-status">Loading attendance…</p>}
-        {status === "not-signed-in" && <p className="att-status">Please sign in to view your attendance.</p>}
-        {status === "loaded" && <p className="att-status success">Your attendance list below</p>}
-        {status === "failed" && (
-          <p className="att-status error">Could not load attendance. Try again later.</p>
-        )}
-
-        {user && (
-          <div className="user-block">
-            <div className="user-name">{user.displayName || "No name"}</div>
-            <div className="user-email">{user.email}</div>
-            <div className="user-uid">UID: {user.uid}</div>
+    <>
+      <Headers />
+      <div className="attendance-container">
+        <div className="attendance-card">
+          <div className="card-top">
+            <h2 className="att-heading">Daily Attendance</h2>
+            {status === "checking" && <p className="att-status">Loading attendance…</p>}
+            {status === "not-signed-in" && (
+              <p className="att-status">Please sign in to view your attendance.</p>
+            )}
+            {status === "loaded" && <p className="att-status success">Your attendance list below</p>}
+            {status === "failed" && (
+              <p className="att-status error">Could not load attendance. Try again later.</p>
+            )}
           </div>
-        )}
 
-        <div style={{ marginTop: 20 }}>
-          <h3 style={{ marginBottom: 10 }}>Attendance List</h3>
-
-          {/* Inline small progress bar/text above the table (non-blocking) */}
-          {loadingTable && (
-            <div className="attendance-inline-progress">
-              Loading attendance — {loadedCount} / {totalCount}
+          {user && (
+            <div className="user-block">
+              <div className="user-name">{user.displayName || "No name"}</div>
+              <div className="user-email">{user.email}</div>
+              <div className="user-uid">UID: {user.uid}</div>
             </div>
           )}
 
-          {tableRows.length === 0 && !loadingTable ? (
-            <p>No dates in range or not signed in.</p>
-          ) : (
+          <div style={{ marginTop: 20 }}>
+            <h3 className="list-title">Attendance List</h3>
+
+            {loadingTable && (
+              <div className="attendance-inline-progress">
+                Loading attendance — {loadedCount} / {totalCount}
+              </div>
+            )}
+
             <div className="attendance-table-wrap centered black-brown">
-              <table className="attendance-table">
-                <thead>
-                  <tr>
-                    <th>Day</th>
-                    <th>Date</th>
-                    <th>Username</th>
-                    <th>Usermail</th>
-                    <th>Attendance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tableRows.map((r) => (
-                    <tr key={r.date}>
-                      <td>{r.day}</td>
-                      <td>{r.date}</td>
-                      <td>{r.userName}</td>
-                      <td>{r.userEmail}</td>
-                      <td className={r.attended ? "att-yes" : "att-no"}>
-                        {r.attended ? "Yes" : "No"}
-                      </td>
+              {tableRows.length === 0 && !loadingTable ? (
+                <p className="no-records">No attendance records yet. Admin will add attendance from admin panel or Firebase Console.</p>
+              ) : (
+                <table className="attendance-table three-d" aria-describedby="attendance-list">
+                  <thead>
+                    <tr>
+                      <th>DAY</th>
+                      <th>DATE</th>
+                      <th>USERNAME</th>
+                      <th>USERMAIL</th>
+                      <th>ATTENDANCE</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {tableRows.map((r) => (
+                      <tr key={r.id} className="row-3d" tabIndex={0}>
+                        <td>{r.day}</td>
+                        <td>{r.date}</td>
+                        <td>{r.userName}</td>
+                        <td>{r.userEmail}</td>
+                        <td>
+                          <span className={r.attended ? "pill pill-yes" : "pill pill-no"}>
+                            {r.attended ? "Yes" : "No"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {loadingTable && (
+        <div className="attendance-loading-overlay" aria-hidden>
+          <div className="attendance-loading-card">
+            <div className="loading-title">Loading attendance…</div>
+            <div className="loading-sub">{loadedCount} / {totalCount}</div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
