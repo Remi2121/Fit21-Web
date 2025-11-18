@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-// Fithome.jsx
-import React, { useState, useEffect, useRef } from "react";
+// Fithome.jsx (attendance system removed)
+import React, { useState, useEffect } from "react";
 import "./fithome.css";
 import Headers from "../header/header.jsx";
 import hero_image from "../../assets/hero_image.png";
@@ -24,8 +24,6 @@ import {
   getDocs,
   doc,
   setDoc,
-  getDoc,
-  serverTimestamp,
 } from "firebase/firestore";
 
 const Fithome = () => {
@@ -47,84 +45,8 @@ const Fithome = () => {
   const [grantMsg, setGrantMsg] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // New states for prompts/toasts
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const promptShownRef = useRef(false); // ensure prompt happens only once per mount
-  const attendanceMarkedRef = useRef(false); // ensure we only mark once per session
-
-  const [toastMessage, setToastMessage] = useState("");
-  const [showToast, setShowToast] = useState(false);
-  const toastTimerRef = useRef(null);
-
   const navigate = useNavigate();
   const transition = { type: "spring", duration: 3 };
-
-  // ---------------- DATE HELPERS (Colombo timezone) ----------------
-  function getTodayYYYYMMDD(timeZone = "Asia/Colombo") {
-    const now = new Date();
-    const parts = new Intl.DateTimeFormat("en-GB", {
-      timeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).formatToParts(now);
-
-    const map = {};
-    parts.forEach((p) => (map[p.type] = p.value));
-    return `${map.year}-${map.month}-${map.day}`;
-  }
-
-  // ---------------- TOAST ----------------
-  const showToastMessage = (msg, ms = 4000) => {
-    if (toastTimerRef.current) {
-      clearTimeout(toastTimerRef.current);
-      toastTimerRef.current = null;
-    }
-    setToastMessage(msg);
-    setShowToast(true);
-    toastTimerRef.current = setTimeout(() => {
-      setShowToast(false);
-      toastTimerRef.current = null;
-    }, ms);
-  };
-
-  // ---------------- MARK ATTENDANCE ----------------
-  // returns "marked" | "already" | "error"
-  const markAttendanceForUser = async (u) => {
-    if (!u) return "error";
-    // prevent re-marking same session
-    if (attendanceMarkedRef.current) {
-      return "already";
-    }
-    try {
-      const uid = u.uid;
-      const today = getTodayYYYYMMDD();
-      const attRef = doc(db, "users", uid, "attendance", today);
-
-      const snap = await getDoc(attRef);
-      if (snap && snap.exists()) {
-        attendanceMarkedRef.current = true;
-        return "already";
-      } else {
-        await setDoc(
-          attRef,
-          {
-            userId: uid,
-            date: today,
-            markedAt: serverTimestamp(),
-            userName: u.displayName || null,
-            email: u.email || null,
-          },
-          { merge: true }
-        );
-        attendanceMarkedRef.current = true;
-        return "marked";
-      }
-    } catch (err) {
-      console.error("markAttendance error:", err);
-      return "error";
-    }
-  };
 
   // Close modals on ESC
   useEffect(() => {
@@ -138,7 +60,7 @@ const Fithome = () => {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Watch auth → detect admin from Firestore + derive username + attendance marking
+  // Watch auth → detect admin from Firestore + derive username
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       setCheckingAdmin(true);
@@ -150,29 +72,8 @@ const Fithome = () => {
           (u.displayName && u.displayName.trim()) ||
           (u.email ? u.email.split("@")[0] : "User");
         setUserName(friendly);
-
-        // mark attendance immediately after we detect signed-in user
-        const result = await markAttendanceForUser(u);
-        if (result === "marked") {
-          showToastMessage("Attendance marked for today ✅", 4500);
-        } else if (result === "already") {
-          showToastMessage("Attendance already marked for today", 3500);
-        } else {
-          showToastMessage("Could not mark attendance. Try again later.", 3500);
-        }
-
       } else {
         setUserName("Guest");
-
-        // If not signed in and not shown prompt yet, show small prompt for 5s then open login modal.
-        if (!promptShownRef.current) {
-          promptShownRef.current = true;
-          setShowLoginPrompt(true);
-          setTimeout(() => {
-            setShowLoginPrompt(false);
-            setShowLogin(true);
-          }, 5000);
-        }
       }
 
       if (!u) {
@@ -251,7 +152,7 @@ const Fithome = () => {
         {
           email: newEmail,
           role: "admin",
-          createdAt: serverTimestamp(),
+          createdAt: new Date(),
           createdBy: userEmail,
         },
         { merge: true }
@@ -272,18 +173,7 @@ const Fithome = () => {
   // Called when Login component reports success
   const onLoginSuccess = async () => {
     setShowLogin(false);
-    // mark attendance now that user is logged in
-    const u = auth.currentUser;
-    if (u) {
-      const result = await markAttendanceForUser(u);
-      if (result === "marked") {
-        showToastMessage("Attendance marked for today ✅", 4500);
-      } else if (result === "already") {
-        showToastMessage("Attendance already marked for today", 3500);
-      } else {
-        showToastMessage("Could not mark attendance. Try again later.", 3500);
-      }
-    }
+    // Attendance marking removed — nothing else to do here.
   };
 
   return (
@@ -315,12 +205,7 @@ const Fithome = () => {
             </div>
           </div>
 
-          <div className="fit-home-figures">
-            <div>
-              <span>+250</span>
-              <span>Members</span>
-            </div>
-          </div>
+
 
           <div className="fit-home-buttons">
             <button className="btn">Learn More</button>
@@ -349,19 +234,7 @@ const Fithome = () => {
         </div>
       </div>
 
-      {/* Login prompt popup (appears for 5s when user is not signed in on page load) */}
-      <div className={`login-prompt ${showLoginPrompt ? "show" : ""}`}>
-        <div className="login-prompt-inner">
-          To mark attendance, please log in.
-        </div>
-      </div>
-
-      {/* Toast message */}
-      <div className={`app-toast ${showToast ? "show" : ""}`}>
-        {toastMessage}
-      </div>
-
-      {/*  Login Popup */}
+      {/* Login Popup */}
       <div
         className={`login-popup ${showLogin ? "show" : ""}`}
         role="dialog"
