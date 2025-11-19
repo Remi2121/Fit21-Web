@@ -1,6 +1,9 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useRef, useEffect, useState } from "react";
 import { Pose, POSE_CONNECTIONS } from "@mediapipe/pose";
 import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
+import './pushup.css'
+import Pushup from "../../assets/pushup.png"
 
 export default function PushUpCounter() {
   const videoRef = useRef(null);
@@ -151,14 +154,16 @@ export default function PushUpCounter() {
   }, []);
 
   return (
-    <div style={{ textAlign: "center", paddingTop: 20 }}>
-      <h2> Push-Up Counter</h2>
+    <div className="pushup-container">
+      <h2 className="stoke-text"> Push-Up Counter</h2>
       <video
         ref={videoRef}
         style={{ display: "none" }}
         width={640}
         height={480}
       />
+
+      <div className="pushup-stage">
       <canvas
         ref={canvasRef}
         width={640}
@@ -168,6 +173,16 @@ export default function PushUpCounter() {
           borderRadius: "8px",
         }}
       />
+
+    <div className="pushup-plain">
+          <span className="pushup-tip-plain">
+            For this pose, stand in a proper side view facing the camera.
+          </span>
+          <img src={Pushup} className="pushup-pose-img" alt="ref" draggable="false" />
+        </div>
+
+        </div>
+
       <div style={{ marginTop: 10, fontSize: 18 }}>
         <strong>Push-ups:</strong> {count} | <strong>Status:</strong> {status}
       </div>

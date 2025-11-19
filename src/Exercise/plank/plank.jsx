@@ -1,6 +1,9 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useRef, useEffect, useState } from 'react';
 import { Pose, POSE_CONNECTIONS } from '@mediapipe/pose';
 import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
+import './plank.css'
+import Plankexercise from "../../assets/plank.png"
 
 export default function PlankTimerOptimized() {
   const videoRef = useRef(null);
@@ -146,15 +149,26 @@ export default function PlankTimerOptimized() {
   }, [success]);
 
   return (
-    <div style={{ textAlign: 'center', paddingTop: 20 }}>
-      <h2>Perfect Plank Challenge 1</h2>
+    <div className="plank-container">
+      <h2 className="stoke-text">Perfect Plank Challenge 1</h2>
       <video ref={videoRef} style={{ display: 'none' }} width={640} height={480} />
+
+        <div className="plank-stage">
       <canvas
         ref={canvasRef}
         width={640}
         height={480}
         style={{ border: '2px solid #444', borderRadius: '8px' }}
       />
+
+     <div className="plank-plain">
+          <span className="plank-tip-plain">
+            For this pose, stand in a proper side view facing the camera.
+          </span>
+          <img src={Plankexercise} className="plank-pose-img" alt="ref" draggable="false" />
+        </div>
+
+      </div>
       <h3>Status: {Plank}</h3>
       <h3>Time: {time}s</h3>
       {success && (
