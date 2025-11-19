@@ -1,13 +1,18 @@
+// Login.jsx (updated)
 import React, { useState } from "react";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   updateProfile,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "../../firebase";
+import { auth, db } from "../../firebase"; // keep your firebase export
 import { useNavigate } from "react-router-dom";
 import "./login.css";
+
+const provider = new GoogleAuthProvider();
 
 const Login = ({ onSuccess }) => {
   const [email, setEmail] = useState("");
@@ -54,6 +59,35 @@ const Login = ({ onSuccess }) => {
     }
   };
 
+  // Google sign-in
+  const handleGoogleSignIn = async () => {
+    setMessage("");
+    setLoading(true);
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // If the user is new, create a record in Firestore
+      if (result._tokenResponse && result._tokenResponse.isNewUser) {
+        await setDoc(doc(db, "users", user.uid), {
+          username: user.displayName || "",
+          email: user.email || "",
+          createdAt: serverTimestamp(),
+          provider: "google",
+        });
+      }
+
+      setMessage(`✅ Signed in as ${user.displayName || user.email}`);
+      if (onSuccess) onSuccess();
+      navigate("/");
+    } catch (err) {
+      console.error("Google sign-in error", err);
+      setMessage("❌ " + (err.message || "Google sign-in failed"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="login-box" id="login">
       <form onSubmit={handleSubmit} className="login-popup-inputs">
@@ -90,6 +124,16 @@ const Login = ({ onSuccess }) => {
           {loading ? "Please wait…" : isRegister ? "Sign Up" : "Login"}
         </button>
 
+        {/* Google sign-in button placed under the main login button as requested */}
+        <button
+          type="button"
+          className="google-btn flex items-center justify-center gap-2"
+          onClick={handleGoogleSignIn}
+          disabled={loading}
+        >
+          {loading ? "Please wait…" : "Sign in with Google"}
+        </button>
+
         {message && <p className="note">{message}</p>}
 
         <p
@@ -109,3 +153,4 @@ const Login = ({ onSuccess }) => {
 };
 
 export default Login;
+

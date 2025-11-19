@@ -336,6 +336,7 @@ useEffect(() => {
         >
           Points &amp; Leaderboard
         </button>
+        
       </aside>
 
       {/* Main content */}

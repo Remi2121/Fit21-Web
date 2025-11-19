@@ -3,26 +3,114 @@
   flex-direction: column;
   align-items: center;
 }
-
-.login-box input {
-  margin: 5px;
+.login-popup-inputs input {
+  margin: 5px 0;            /* Removed left/right margin */
   padding: 8px;
   border-radius: 5px;
   border: 1px solid #ccc;
+  width: 100%;
+  box-sizing: border-box;   /* Makes width perfect */
 }
 
-.login-box button {
-  background-color: #ff5722;
-  color: white;
+.login-popup-inputs button {
+  background-color: #bdb6b8;
+  color: rgb(17, 17, 17);
   border: none;
   padding: 8px 15px;
   border-radius: 5px;
   cursor: pointer;
+  margin-top: 5px;
+  width: 100%;
+  box-sizing: border-box;   /* Matching exact width with input */
+}
+
+
+.login-popup-inputs button:hover {
+  background-color: #930d0d;
+
 }
 
 .toggle-link {
   font-size: 0.9rem;
   color: blue;
   cursor: pointer;
+  text-align: center;
+  margin-top: 10px;
+}
+
+.note {
+  color: red;
+  font-size: 0.9rem;
+  margin-top: 5px;
+  text-align: center;
+}
+
+/* Login Popup Overlay */
+.login-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.6);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.login-popup.show {
+  display: flex;
+}
+
+.login-popup-container {
+  background: white;
+  padding: 2rem;
+  border-radius: 10px;
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.login-popup-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.login-popup-title img {
+  width: 25px;
+  cursor: pointer;
+}
+
+
+.google-btn {
+  background-color: #fff;
+  color: #000;
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 8px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.google-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.google-btn::before {
+content: "";
+background-image: url('https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg');
+background-size: contain;
+background-repeat: no-repeat;
+width: 20px; /* adjust size */
+height: 20px; /* adjust size */
+display: inline-block;
+margin-right: 6px;
 }
 

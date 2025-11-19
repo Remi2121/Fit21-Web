@@ -12,6 +12,7 @@ import Yoga from "./Exercise/Yoga/Yogo.jsx";
 import PushUp from "./Exercise/pushup/pushup.jsx";
 import Plank from "./Exercise/plank/plank.jsx";
 import Squat from "./Exercise/Scott/squat.jsx"
+import Attendance from "./Attendance/Attendance.jsx";
 
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
           <Route path="/leaderboard" element={<Leaderboard />} /> 
           <Route path="/contact" element={<Navigate to="/#contact" replace />} />
           <Route path="/login" element={<Navigate to="/#login" replace />} />
+          <Route path="/attendance" element={<Attendance/>} />
         </Routes>
       </Router>
     </div>
