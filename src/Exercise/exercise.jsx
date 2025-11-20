@@ -4,13 +4,13 @@ import {
   FaRunning,
   FaArrowUp,
   FaClipboardList,
-  FaQuestionCircle,
   FaPrayingHands,
-  FaHome,          // ✅ ADD THIS
+  FaHome,
+  FaDumbbell, 
 } from "react-icons/fa";
 
 import Headers from "../components/header/header";
-import "./exercise.css"; // optional, create for styles below
+import "./exercise.css"; 
 
 const ExerciseSelect = () => {
   const exercises = [
@@ -18,9 +18,8 @@ const ExerciseSelect = () => {
     { name: "Plank", icon: <FaRunning className="ex-icon" aria-hidden />, path: "/plank" },
     { name: "Yoga", icon: <FaPrayingHands className="ex-icon" aria-hidden />, path: "/yoga" },
     { name: "Quiz", icon: <FaClipboardList className="ex-icon" aria-hidden />, path: "/quizstart" },
-    { name: "Squat", icon: <FaQuestionCircle className="ex-icon" aria-hidden />, path: "/squat" },
+    { name: "Squat", icon: <FaDumbbell className="ex-icon" aria-hidden />, path: "/squat" },
   ];
-
   return (
      <>
     <Headers />

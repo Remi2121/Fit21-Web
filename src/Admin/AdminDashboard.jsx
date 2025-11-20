@@ -7,14 +7,13 @@ import CommitteeSection from "./components/CommitteeSection.jsx";
 import QuizSection from "./components/QuizSection.jsx";
 import AnnouncementSection from "./components/AnnouncementSection.jsx";
 import LeaderboardSection from "./components/LeaderboardSection.jsx";
-import Card from "./components/Card.jsx";
-
-
+//import Card from "./components/Card.jsx";
+import TeamSection from "./components/TeamSection.jsx"; // <-- NEW
 
 export default function AdminDashboard() {
   // ===== STATE =====
 
-useEffect(() => {
+  useEffect(() => {
     // page load aana udane oru dhadava test pannum
     async function runTest() {
       try {
@@ -29,6 +28,7 @@ useEffect(() => {
 
     runTest();
   }, []); // empty dependency -> once on mount
+
   const [committee, setCommittee] = useState([
     {
       id: 1,
@@ -336,7 +336,14 @@ useEffect(() => {
         >
           Points &amp; Leaderboard
         </button>
-        
+
+        {/* NEW Teams button */}
+        <button
+          onClick={() => setActiveTab("teams")}
+          className={`admin-nav-button ${activeTab === "teams" ? "active" : ""}`}
+        >
+          Teams
+        </button>
       </aside>
 
       {/* Main content */}
@@ -393,6 +400,9 @@ useEffect(() => {
             setCurrentDay={setCurrentDay}
           />
         )}
+
+        {/* NEW: Teams Section render */}
+        {activeTab === "teams" && <TeamSection />}
       </main>
     </div>
   );
