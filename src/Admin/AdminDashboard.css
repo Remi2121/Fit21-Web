@@ -543,3 +543,44 @@ img {
   }
 }
 
+/* ==========================
+   GLOBAL ADMIN INPUT STYLE
+   ========================== */
+.admin-input {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 10px 14px;
+  color: #fff;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: 0.25s ease;
+  width: 100%;
+}
+
+.admin-input::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.admin-input:focus {
+  border-color: #ff4d4d;
+  box-shadow: 0 0 8px #ff4d4d99;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* button style upgrade */
+.admin-btn {
+  background: linear-gradient(145deg, #b30000d1, #ff4d4d);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  transition: 0.2s ease;
+}
+
+.admin-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 10px #ff7a4dcc;
+}
