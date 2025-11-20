@@ -76,7 +76,7 @@ export default function PushUpCounter() {
 
     async function savePoints() {
       const today = new Date().toISOString().split("T")[0];
-      const ref = doc(db, "users", userId, "Exercises", exerciseId);
+      const ref = doc(db, "users", userId, "exercises", exerciseId);
 
       let pointsToSave = count;
       if (pointsToSave > 2) pointsToSave = 2; // my change
