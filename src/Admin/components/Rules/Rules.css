@@ -1,0 +1,94 @@
+/* src/Admin/components/Rules/Rules.css */
+.rules-wrap {
+  padding: 30px;
+  color: white;
+}
+
+.rules-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.rules-form {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+
+.rules-label {
+  display: flex;
+  flex-direction: column;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.rules-input {
+  margin-top: 8px;
+  padding: 12px 15px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: white;
+  border-radius: 12px;
+  width: 200px;
+  font-size: 16px;
+  outline: none;
+  transition: 0.2s;
+}
+
+.rules-input:focus {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: #ff7a4d;
+  box-shadow: 0 0 10px rgba(255, 122, 77, 0.35);
+}
+
+.rules-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 12px;
+}
+
+/* Primary Save Button */
+.rules-save {
+  background: linear-gradient(90deg, #ff7a4d, #ff3e7f);
+  padding: 12px 25px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 3px 15px rgba(255, 90, 90, 0.4);
+  transition: 0.2s ease;
+}
+
+.rules-save:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(255, 90, 90, 0.6);
+}
+
+/* Reset Button */
+.rules-default {
+  padding: 12px 22px;
+  border-radius: 12px;
+  font-size: 16px;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.rules-default:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+}
+
+.rules-msg {
+  margin-top: 18px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #bfffc3;
+}
