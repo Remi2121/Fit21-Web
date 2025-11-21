@@ -6,6 +6,8 @@ const Yogo = () => {
     <div>
       <BigToe/>
       <Bridge/>
+      <WarriorIII/>
+      
     </div>
   )
 }
