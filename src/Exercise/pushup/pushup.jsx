@@ -2,12 +2,12 @@
 import React, { useRef, useEffect, useState } from "react";
 import { Pose, POSE_CONNECTIONS } from "@mediapipe/pose";
 import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
-import './pushup.css'
-import Pushup from "../../assets/pushup.png"
+import "./pushup.css";
+import Pushup from "../../assets/pushup.png";
 
 // === Firebase imports ===
 import { db } from "../../firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 export default function PushUpCounter() {
@@ -18,6 +18,15 @@ export default function PushUpCounter() {
   const [status, setStatus] = useState("waiting");
   const [userId, setUserId] = useState(null);
 
+  // this ensures we don't immediately write to Firestore while initial load is happening
+  const [loaded, setLoaded] = useState(false);
+
+  // store readable last-saved timestamp for UI
+  const [lastSaved, setLastSaved] = useState(null);
+
+  // new: lock per-day behaviour (if true, user can't increase count anymore today)
+  const [locked, setLocked] = useState(false);
+
   const exerciseId = "pushup"; // Unique exercise identifier
 
   // ============================
@@ -26,9 +35,8 @@ export default function PushUpCounter() {
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUserId(user.uid);
-      }
+      if (user) setUserId(user.uid);
+      else setUserId(null);
     });
     return () => unsubscribe();
   }, []);
@@ -39,33 +47,95 @@ export default function PushUpCounter() {
   useEffect(() => {
     if (!userId) return;
 
+    let cancelled = false;
     async function loadDailyPoints() {
-      const today = new Date().toISOString().split("T")[0];
-      const ref = doc(db, "users", userId, "exercises", exerciseId);
+      try {
+        const today = new Date().toISOString().split("T")[0];
+        const ref = doc(db, "users", userId, "exercises", exerciseId);
+        const snap = await getDoc(ref);
 
-      const snap = await getDoc(ref);
+        // First time ever → create record (include timestamps)
+        if (!snap.exists()) {
+          await setDoc(
+            ref,
+            {
+              date: today,
+              points: 0,
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true }
+          );
+          if (!cancelled) {
+            setCount(0);
+            setLocked(false);
+            setLastSaved(null);
+            setLoaded(true);
+          }
+          return;
+        }
 
-      // First time ever → create record
-      if (!snap.exists()) {
-        await setDoc(ref, { date: today, points: 0 });
-        setCount(0);
-        return;
+        const data = snap.data();
+
+        // New day → reset once (keep timestamps)
+        if (data.date !== today) {
+          await setDoc(
+            ref,
+            {
+              date: today,
+              points: 0,
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true }
+          );
+          if (!cancelled) {
+            setCount(0);
+            setLocked(false);
+            setLastSaved(new Date().toLocaleString());
+            setLoaded(true);
+          }
+          return;
+        }
+
+        // Same day → load existing
+        if (!cancelled)
+          setCount(typeof data.points === "number" ? data.points : 0);
+
+        // Lock behaviour: if points > 0 (you've already done some push-ups today),
+        // we lock the counter so additional visits won't allow extra increments.
+        // Modify this rule if you prefer (e.g. lock only when points >= 10).
+        if (!cancelled) {
+          const pointsNum = typeof data.points === "number" ? data.points : 0;
+          setLocked(pointsNum > 0);
+        }
+
+        // read saved timestamp (Firestore Timestamp -> toDate), fallback to updatedAtLocal
+        if (!cancelled) {
+          if (data.updatedAt && typeof data.updatedAt.toDate === "function") {
+            setLastSaved(data.updatedAt.toDate().toLocaleString());
+          } else if (data.updatedAtLocal) {
+            try {
+              setLastSaved(new Date(data.updatedAtLocal).toLocaleString());
+            } catch {
+              setLastSaved(null);
+            }
+          } else {
+            setLastSaved(null);
+          }
+          setLoaded(true);
+        }
+      } catch (err) {
+        console.error("Error loading daily points:", err);
+        if (!cancelled) {
+          setLoaded(true); // allow saves after error so app still works
+        }
       }
-
-      const data = snap.data();
-
-      // New day → reset once
-      if (data.date !== today) {
-        await setDoc(ref, { date: today, points: 0 });
-        setCount(0);
-        return;
-      }
-
-      // Same day → load existing
-      setCount(data.points);
     }
 
     loadDailyPoints();
+
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
 
   // ============================
@@ -73,30 +143,82 @@ export default function PushUpCounter() {
   // ============================
   useEffect(() => {
     if (!userId) return;
+    if (!loaded) return; // IMPORTANT: don't save while initial load hasn't finished
 
+    // If locked, don't overwrite server data on automatic saves.
+    // Manual reset explicitly writes even if locked.
+    if (locked) {
+      return;
+    }
+
+    let cancelled = false;
     async function savePoints() {
-      const today = new Date().toISOString().split("T")[0];
-      const ref = doc(db, "users", userId, "Exercises", exerciseId);
+      try {
+        const today = new Date().toISOString().split("T")[0];
+        const ref = doc(db, "users", userId, "exercises", exerciseId);
 
-      let pointsToSave = count;
-      if (pointsToSave > 2) pointsToSave = 2; // my change
+        let pointsToSave = count;
+        if (pointsToSave > 20) pointsToSave = 20;
 
-      await setDoc(ref, { date: today, points: pointsToSave });
+        await setDoc(
+          ref,
+          {
+            date: today,
+            points: pointsToSave,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        if (!cancelled) {
+          setLastSaved(new Date().toLocaleString());
+        }
+      } catch (err) {
+        console.error("Error saving points:", err);
+      }
     }
 
     savePoints();
-  }, [count, userId]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [count, userId, loaded, locked]);
 
   // ============================
-  // 🔵 Manual reset button handler
+  // 🔵 Manual reset button handler (confirm + alert)
   // ============================
   const handleManualReset = async () => {
     if (!userId) return;
-    const today = new Date().toISOString().split("T")[0];
-    const ref = doc(db, "users", userId, "exercises", exerciseId);
-    await setDoc(ref, { date: today, points: 0 });
-    setCount(0);
+
+    const confirmed = window.confirm(
+      "Are you sure? Today's push-up points will be reset to 0."
+    );
+    if (!confirmed) return;
+
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const ref = doc(db, "users", userId, "exercises", exerciseId);
+      await setDoc(
+        ref,
+        {
+          date: today,
+          points: 0,
+          updatedAt: serverTimestamp(),
+          updatedAtLocal: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+      setCount(0);
+      setLocked(false); // unlock after manual reset
+      setLastSaved(new Date().toLocaleString());
+      window.alert("Today's push-up points reset successfully!");
+    } catch (err) {
+      console.error("Error resetting points:", err);
+      window.alert("Failed to reset points. Please try again.");
+    }
   };
+
 
   // ============================
   // ⚠️ EXISTING Push-Up Pose Logic (unchanged)
@@ -105,6 +227,7 @@ export default function PushUpCounter() {
     let pose;
     let rafId;
     let state = "up"; // track push-up motion
+    let shownLockedAlert = false;
 
     async function init() {
       try {
@@ -202,8 +325,19 @@ export default function PushUpCounter() {
             bodyAngleRight > 160
           ) {
             if (state === "down") {
-              setCount((prev) => (prev < 20 ? prev + 1 : 20)); // cap at 20
-            }
+              if (locked) {
+                setStatus("locked");
+                // show one alert when locked is first observed
+                if (!shownLockedAlert) {
+                  window.alert(
+                    "You've already completed push-ups today. Come back tomorrow or click 'Reset Today' to try again."
+                  );
+                  shownLockedAlert = true;
+                }
+              } else {
+                setCount((prev) => (prev < 20 ? prev + 1 : 20)); // cap at 20
+              }
+            } 
             state = "up";
             setStatus("up");
           } else if (leftArmAngle < 70 && rightArmAngle < 70) {
@@ -233,7 +367,7 @@ export default function PushUpCounter() {
       }
       if (pose) pose.close();
     };
-  }, []);
+  }, [locked]);
 
   return (
     <div className="pushup-container">
@@ -266,15 +400,27 @@ export default function PushUpCounter() {
 
       <div style={{ marginTop: 10, fontSize: 18 }}>
         <strong>Push-ups:</strong> {count} | <strong>Status:</strong> {status}
+        {locked && (
+          <span style={{ marginLeft: 12, color: "#ffcc00" }}>
+            • You've already recorded push-ups today please reset to try again.
+          </span>
+        )}
+      
       </div>
 
-      {/* 🔵 Manual reset button */}
+      <div style={{ marginTop: 6, fontSize: 12, color: "#666" }}>
+        <em>Last saved:</em> {lastSaved || "—"}
+      </div>
+
       <button 
         onClick={handleManualReset} 
-        style={{ marginTop: 10, padding: "6px 12px", fontSize: 16 }}
+        className="reset-btn"
       >
         Reset Today
       </button>
+      
     </div>
   );
 }
+
+
