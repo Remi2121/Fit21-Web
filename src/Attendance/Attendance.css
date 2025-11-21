@@ -36,6 +36,7 @@
   overflow: hidden; /* important: only inner table scrolls */
   box-sizing: border-box;
   z-index: 999;
+  overflow-y: auto;
 }
 
 /* main card (fixed, doesn't scroll) */

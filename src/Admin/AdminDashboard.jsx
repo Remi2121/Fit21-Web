@@ -9,6 +9,9 @@ import AnnouncementSection from "./components/AnnouncementSection.jsx";
 import LeaderboardSection from "./components/LeaderboardSection.jsx";
 //import Card from "./components/Card.jsx";
 import TeamSection from "./components/TeamSection.jsx"; // <-- NEW
+import Rules from "./components/Rules/Rules.jsx";
+import Attendance from "./components/Attendance/Attendance.jsx";
+
 
 export default function AdminDashboard() {
   // ===== STATE =====
@@ -328,6 +331,14 @@ export default function AdminDashboard() {
         >
           21 Days Announcements
         </button>
+
+        <button
+         onClick={() => setActiveTab("attendance")}
+         className={`admin-nav-button ${activeTab === "attendance" ? "active" : ""}`}
+         >
+           Attendance
+         </button>
+
         <button
           onClick={() => setActiveTab("leaderboard")}
           className={`admin-nav-button ${
@@ -344,6 +355,14 @@ export default function AdminDashboard() {
         >
           Teams
         </button>
+
+        <button
+          onClick={() => setActiveTab("rules")}
+         className={`admin-nav-button ${activeTab === "rules" ? "active" : ""}`}
+        >
+          Rules
+        </button>
+
       </aside>
 
       {/* Main content */}
@@ -403,6 +422,12 @@ export default function AdminDashboard() {
 
         {/* NEW: Teams Section render */}
         {activeTab === "teams" && <TeamSection />}
+
+        {activeTab === "rules" && <Rules />}
+
+        {activeTab === "attendance" && <Attendance />}
+
+
       </main>
     </div>
   );
