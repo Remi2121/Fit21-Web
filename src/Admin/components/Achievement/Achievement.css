@@ -1,0 +1,229 @@
+.ach-wrap {
+  padding: 30px;
+  color: white;
+}
+
+.ach-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 18px;
+}
+
+.ach-subtitle {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 18px 0 10px;
+}
+
+.ach-form {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.ach-label {
+  display: flex;
+  flex-direction: column;
+  font-size: 15px;
+  font-weight: 600;
+  grid-column: span 4;
+}
+
+.ach-wide { grid-column: span 12; }
+
+.ach-input {
+  margin-top: 8px;
+  padding: 12px 15px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: white;
+  border-radius: 12px;
+  font-size: 16px;
+  outline: none;
+  transition: 0.2s;
+}
+
+.ach-input:focus {
+  background: rgba(255,255,255,0.14);
+  border-color: #ff7a4d;
+  box-shadow: 0 0 10px rgba(255,122,77,0.35);
+}
+
+.ach-textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+
+.ach-file { grid-column: span 6; }
+
+.ach-hint {
+  opacity: 0.8;
+  font-weight: 400;
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.ach-actions {
+  grid-column: span 12;
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.ach-save {
+  background: linear-gradient(90deg, #ff7a4d, #ff3e7f);
+  padding: 12px 25px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 3px 15px rgba(255, 90, 90, 0.4);
+  transition: 0.2s ease;
+}
+.ach-save:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(255, 90, 90, 0.6);
+}
+
+.ach-default {
+  padding: 12px 22px;
+  border-radius: 12px;
+  font-size: 16px;
+  color: white;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06);
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+.ach-default:hover {
+  background: rgba(255,255,255,0.12);
+  transform: translateY(-2px);
+}
+
+.ach-msg {
+  grid-column: span 12;
+  margin-top: 6px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #bfffc3;
+}
+
+.ach-preview {
+  grid-column: span 12;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.ach-preview-media {
+  width: 360px;
+  max-width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.05);
+}
+
+.ach-progress {
+  grid-column: span 12;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ach-progress-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff7a4d, #ff3e7f);
+  width: 0%;
+  box-shadow: 0 0 10px rgba(255,122,77,0.35);
+}
+
+.ach-sep {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.15);
+  margin: 24px 0;
+}
+
+.ach-grid {
+  display: grid;
+  grid-template-columns: repeat( auto-fill, minmax(280px, 1fr) );
+  gap: 18px;
+}
+
+.ach-card {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.ach-thumb {
+  background: rgba(255,255,255,0.04);
+}
+.ach-thumb-media {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
+.ach-info {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ach-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.ach-badge {
+  font-weight: 700;
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.ach-pill {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.ach-pill.ok { background: rgba(78, 255, 162, 0.18); }
+.ach-pill.off { background: rgba(255, 154, 78, 0.18); }
+
+.ach-card-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.ach-card-desc {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.ach-card-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+.ach-edit, .ach-del {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06);
+  color: white;
+  cursor: pointer;
+}
+.ach-edit:hover { background: rgba(255,255,255,0.12); }
+.ach-del:hover { background: rgba(255, 80, 80, 0.25); }
+.ach-empty { opacity: 0.8; }

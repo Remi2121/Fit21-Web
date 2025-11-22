@@ -206,15 +206,12 @@ export default function BridgePose({
       }
 
       if (results.landmarks && results.landmarks[0]) {
-        const isGood = !!allGoodRef.current;
-        const connectorColor = isGood ? "#11ff44" : "#f04d4d";
-        const landmarkColor = isGood ? "#11ff44" : "#ff3333";
-
         const utils = new DrawingUtils(ctx);
         utils.drawConnectors(results.landmarks[0], PoseLandmarker.POSE_CONNECTIONS, {
-          color: connectorColor, lineWidth: 2
+          color: "#333",
+          lineWidth: 3,
         });
-        utils.drawLandmarks(results.landmarks[0], { color: landmarkColor, radius: 2 });
+        utils.drawLandmarks(results.landmarks[0], { color: "#fffdfdff",  radius: 4  });
       }
 
       ctx.restore();

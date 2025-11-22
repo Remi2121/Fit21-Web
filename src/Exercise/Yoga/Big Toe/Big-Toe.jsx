@@ -266,9 +266,9 @@ export default function BigToe({ holdMs = 10000, badResetMs = 3000 }) {
         const utils = new DrawingUtils(ctx);
         utils.drawConnectors(results.landmarks[0], PoseLandmarker.POSE_CONNECTIONS, {
           color: "#333",
-          lineWidth: 2,
+          lineWidth: 3,
         });
-        utils.drawLandmarks(results.landmarks[0], { color: "#ff3333", radius: 2 });
+        utils.drawLandmarks(results.landmarks[0], { color: "#fffdfdff",  radius: 4  });
       }
 
       ctx.restore();

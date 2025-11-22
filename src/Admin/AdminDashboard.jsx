@@ -11,6 +11,8 @@ import LeaderboardSection from "./components/LeaderboardSection.jsx";
 import TeamSection from "./components/TeamSection.jsx"; // <-- NEW
 import Rules from "./components/Rules/Rules.jsx";
 import Attendance from "./components/Attendance/Attendance.jsx";
+import AchievementSection from "./components/Achievement/Achievement.jsx";
+
 
 
 export default function AdminDashboard() {
@@ -363,6 +365,15 @@ export default function AdminDashboard() {
           Rules
         </button>
 
+       
+        <button
+        onClick={() => setActiveTab("achievements")}
+        className={`admin-nav-button ${activeTab === "achievements" ? "active" : ""}`}
+         >
+         Achievements
+        </button>
+
+
       </aside>
 
       {/* Main content */}
@@ -426,6 +437,10 @@ export default function AdminDashboard() {
         {activeTab === "rules" && <Rules />}
 
         {activeTab === "attendance" && <Attendance />}
+
+        
+        {activeTab === "achievements" && <AchievementSection />}
+
 
 
       </main>
