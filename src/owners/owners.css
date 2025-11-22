@@ -85,16 +85,75 @@
   user-select: none;
 }
 
-/* Responsive: stack on small screens */
-@media (max-width: 900px){
-  .testimonials{
-    grid-template-columns: 1fr;
-    gap: 2.5rem;
+@media (max-width: 768px){
+  .owners {
+    display: flex;
+    flex-direction: column; /* stack text + image vertically */
+    gap: 2rem;
+    padding: 2rem 1rem;
   }
-  .right-o{
-    min-height: 20rem;
+
+  .left-o {
+    order: 1; /* text comes first */
+    text-align: center;
   }
-  .right-o .frame{ width: 14rem; height: 18rem; }
-  .right-o .bg-block{ width: 12rem; height: 16rem; top: 1.5rem; }
-  .right-o > img{ width: 16rem; height: 20rem; }
+
+  .left-o > span:nth-child(4) {
+    display: block;
+    text-align: center;
+    width: 100%;
+  }
+
+  /* optional: name + role center too */
+  .left-o > span:nth-child(5) {
+    display: block;
+    text-align: center;
+    width: 100%;
+  }
+
+  .right-o {
+    order: 2; /* image + arrows below */
+    min-height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .right-o .frame {
+  position: absolute;
+  inset: -2rem 1rem auto auto;   /* top/right offset */
+  width: 16rem;
+  height: 20rem;
+  border: 2px solid red;
+  background: transparent;
+  z-index: 1;
+  border-radius: 8px;
+    
+  }
+
+  .right-o .bg-block {
+  position: absolute;
+  top: 2.5rem;
+  width: 17rem;
+  height: 19rem;
+  right: -2.5rem;
+  background: var(--planCard);
+  z-index: 2;
+  border-radius: 8px;
+  }
+
+  .right-o > img {
+
+    width: 16rem;
+    height: 20rem;
+  }
+
+  .owners-arrows {
+    position: static;
+    margin-top: 2rem;
+    justify-content: center;
+    left: auto;
+    bottom: auto;
+  }
 }

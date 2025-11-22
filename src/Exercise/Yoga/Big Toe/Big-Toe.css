@@ -154,3 +154,10 @@
   transform: scale(0.96);
 }
 
+.bt-done-card h3{
+  color: white;
+}
+
+.bt-done-card p{
+  color: white;
+}

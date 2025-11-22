@@ -7,14 +7,18 @@ import CommitteeSection from "./components/CommitteeSection.jsx";
 import QuizSection from "./components/QuizSection.jsx";
 import AnnouncementSection from "./components/AnnouncementSection.jsx";
 import LeaderboardSection from "./components/LeaderboardSection.jsx";
-import Card from "./components/Card.jsx";
+//import Card from "./components/Card.jsx";
+import TeamSection from "./components/TeamSection.jsx"; // <-- NEW
+import Rules from "./components/Rules/Rules.jsx";
+import Attendance from "./components/Attendance/Attendance.jsx";
+import AchievementSection from "./components/Achievement/Achievement.jsx";
 
 
 
 export default function AdminDashboard() {
   // ===== STATE =====
 
-useEffect(() => {
+  useEffect(() => {
     // page load aana udane oru dhadava test pannum
     async function runTest() {
       try {
@@ -29,6 +33,7 @@ useEffect(() => {
 
     runTest();
   }, []); // empty dependency -> once on mount
+
   const [committee, setCommittee] = useState([
     {
       id: 1,
@@ -328,6 +333,14 @@ useEffect(() => {
         >
           21 Days Announcements
         </button>
+
+        <button
+         onClick={() => setActiveTab("attendance")}
+         className={`admin-nav-button ${activeTab === "attendance" ? "active" : ""}`}
+         >
+           Attendance
+         </button>
+
         <button
           onClick={() => setActiveTab("leaderboard")}
           className={`admin-nav-button ${
@@ -336,6 +349,31 @@ useEffect(() => {
         >
           Points &amp; Leaderboard
         </button>
+
+        {/* NEW Teams button */}
+        <button
+          onClick={() => setActiveTab("teams")}
+          className={`admin-nav-button ${activeTab === "teams" ? "active" : ""}`}
+        >
+          Teams
+        </button>
+
+        <button
+          onClick={() => setActiveTab("rules")}
+         className={`admin-nav-button ${activeTab === "rules" ? "active" : ""}`}
+        >
+          Rules
+        </button>
+
+       
+        <button
+        onClick={() => setActiveTab("achievements")}
+        className={`admin-nav-button ${activeTab === "achievements" ? "active" : ""}`}
+         >
+         Achievements
+        </button>
+
+
       </aside>
 
       {/* Main content */}
@@ -392,6 +430,19 @@ useEffect(() => {
             setCurrentDay={setCurrentDay}
           />
         )}
+
+        {/* NEW: Teams Section render */}
+        {activeTab === "teams" && <TeamSection />}
+
+        {activeTab === "rules" && <Rules />}
+
+        {activeTab === "attendance" && <Attendance />}
+
+        
+        {activeTab === "achievements" && <AchievementSection />}
+
+
+
       </main>
     </div>
   );

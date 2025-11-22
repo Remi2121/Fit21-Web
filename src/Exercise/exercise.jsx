@@ -1,24 +1,31 @@
 import React from "react";
-import "./exercise.css";
 import { Link } from "react-router-dom";
-import { FaRunning, FaDumbbell, FaQuestionCircle, FaArrowUp, FaHome } from "react-icons/fa";
+import {
+  FaRunning,
+  FaArrowUp,
+  FaClipboardList,
+  FaPrayingHands,
+  FaHome,
+  FaDumbbell, 
+} from "react-icons/fa";
+
 import Headers from "../components/header/header";
+import "./exercise.css"; 
 
 const ExerciseSelect = () => {
   const exercises = [
-    { name: "Pushup", icon: <FaArrowUp />, path: "/pushup" },
-    { name: "Plank", icon: <FaRunning />, path: "/plank" },
-    { name: "Yoga", icon: <FaDumbbell />, path: "/yoga" },
-    { name: "Quiz", icon: <FaQuestionCircle />, path: "/quizstart" },
-    { name: "Squat", icon: <FaQuestionCircle />, path: "/squat" },
+    { name: "Pushup", icon: <FaArrowUp className="ex-icon" aria-hidden />, path: "/pushup" },
+    { name: "Plank", icon: <FaRunning className="ex-icon" aria-hidden />, path: "/plank" },
+    { name: "Yoga", icon: <FaPrayingHands className="ex-icon" aria-hidden />, path: "/yoga" },
+    { name: "Quiz", icon: <FaClipboardList className="ex-icon" aria-hidden />, path: "/quizstart" },
+    { name: "Squat", icon: <FaDumbbell className="ex-icon" aria-hidden />, path: "/squat" },
   ];
-
   return (
      <>
     <Headers />
     <div className="exercise-container">
       <div className="glass-card">
-        <h2>Select Your Exercise for Today</h2>
+        <h2 className="stoke-text">Select Your Exercise for Today</h2>
 
         <div className="exercise-list">
           {exercises.map((item, i) => (

@@ -73,7 +73,14 @@
   flex: 1;
   padding: 24px 32px;
   backdrop-filter: blur(6px);
+
+  max-height: 100vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  
 }
+
+
 
 /* ===== CARD ===== */
 
@@ -367,8 +374,14 @@
 /* image inside circle */
 .edit-avatar-circle img {
   width: 100%;
-  height: 100%;
+  height: auto;
   object-fit: cover;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
 }
 
 .quiz-save-btn {
@@ -378,4 +391,196 @@
 
 .admin-table td .btn-small {
   margin-right: 8px;
+}
+
+/* ===== MOBILE (max 768px) ===== */
+@media (max-width: 768px) {
+  .admin-layout {
+    flex-direction: column;      /* sidebar mela, content keela */
+  }
+
+  .admin-sidebar {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .admin-sidebar-title {
+    width: 100%;
+    margin-bottom: 4px;
+  }
+
+  .admin-sidebar-note {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  .admin-nav-button {
+    flex: 1 1 45%;              /* 2 buttons per row approx */
+    font-size: 13px;
+  }
+
+  .admin-main {
+    padding: 16px;              /* konjam kammi padding */
+  }
+
+  .stat-grid {
+    flex-direction: column;     /* dashboard cards one column */
+  }
+
+  .committee-grid {
+    flex-direction: column;
+  }
+}
+
+/* ========= 📱 RESPONSIVE FIXES ========= */
+
+/* Make layout stack vertically on small screens */
+@media (max-width: 768px) {
+  .admin-layout {
+    flex-direction: column;
+  }
+
+  .admin-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid rgba(248, 113, 113, 0.3);
+    text-align: center;
+  }
+
+  .admin-nav-button {
+    text-align: center;
+    justify-content: center;
+  }
+
+  .admin-main {
+    padding: 12px;
+  }
+
+  /* Stat cards become full-width on phone */
+  .stat-grid {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .stat-card {
+    width: 100%;
+  }
+
+  /* Tables — make them scrollable */
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  /* Quiz / Announcement forms */
+  form {
+    display: block !important;
+  }
+
+  form input,
+  form textarea,
+  form select,
+  form button {
+    width: 100% !important;
+    margin-bottom: 0.75rem;
+  }
+
+  /* Buttons inside tables and lists */
+  .btn,
+  button {
+    width: 100%;
+    margin-top: 6px;
+  }
+
+  /* For Announcement container */
+  .ann-conainer {
+    padding: 0.5rem;
+    background-color: rgba(22, 163, 74, 0.3);
+  }
+
+  /* Fix committee photo list */
+  .committee-grid {
+    justify-content: center;
+  }
+}
+
+/* ===== 📱 Leaderboard mobile view ===== */
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+@media (max-width: 640px) {
+  /* Rank column hide pannalaam – space save */
+  .leaderboard-table th:nth-child(1),
+  .leaderboard-table td:nth-child(1) {
+    display: none;
+  }
+
+  /* Cells / header font size konjam kammi */
+  .leaderboard-table th,
+  .leaderboard-table td {
+    padding: 6px 4px;
+    font-size: 12px;
+  }
+
+  /* Action column-ku konjam fixed width */
+  .leaderboard-table .action-cell {
+    min-width: 110px;
+    text-align: right;
+  }
+
+  /* Buttons chinna size, side-by-side nice-aa */
+  .leaderboard-table .btn-small {
+    padding: 4px 8px;
+    font-size: 11px;
+    margin-left: 4px;
+  }
+}
+
+/* ==========================
+   GLOBAL ADMIN INPUT STYLE
+   ========================== */
+.admin-input {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 10px 14px;
+  color: #fff;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: 0.25s ease;
+  width: 100%;
+}
+
+.admin-input::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.admin-input:focus {
+  border-color: #ff4d4d;
+  box-shadow: 0 0 8px #ff4d4d99;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* button style upgrade */
+.admin-btn {
+  background: linear-gradient(145deg, #b30000d1, #ff4d4d);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  transition: 0.2s ease;
+}
+
+.admin-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 10px #ff7a4dcc;
 }
