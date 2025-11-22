@@ -1,71 +1,46 @@
-/* === PushUp page full-screen + layout === */
 .pushup-container {
   box-sizing: border-box;
-  min-height: 100vh;                /* full viewport height */
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;      /* change to center to vertically center whole page */
-  padding: 16px 12px 32px;
+  padding: 8px 8px 32px;
   color: #fff;
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-
-  /* same background as your other screens */
   background: radial-gradient(1200px 700px at 20% 0%, #2f0303 0%, transparent 60%),
               linear-gradient(135deg, #242425, #21050a);
-  background-size: cover;
-  background-repeat: no-repeat;
-  background-attachment: fixed;    /* optional: set to 'scroll' if you want it to move */
+  background-attachment: fixed;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 }
 
+.stoke-text { margin: 8px 0 4px; }
 
-.pushup-container .canvas {
-  width: 100%;
-  max-width: 940px;   /* keeps the canvas from getting too wide on large screens */
-  margin: 12px auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.finished-banner {
+  margin-top: 12px;
+  padding: 12px 16px;
+  border: 1px solid #444;
+  border-radius: 8px;
+  font-size: 16px;
 }
 
-/* the canvas itself — responsive scaling, rounded border & shadow */
-.pushup-container canvas {
-  width: 640px;           
-  max-width: 94vw;        
-  height: auto;          
-  border: 4px solid #444;
-  border-radius: 14px;
-  background: #000;
-  box-shadow: 0 10px 22px rgba(0,0,0,.35);
-  display: block;
-}
-
-/* Make the two columns top-align */
 .pushup-stage{
   padding-top: 1rem;
-  margin: 8px auto 0;
   display: flex;
-  align-items: flex-start;   
+  align-items: flex-start;
   justify-content: center;
   gap: 16px;
   flex-wrap: wrap;
 }
 
-/* Right column wrapper */
 .pushup-plain{
   padding-left: 1.5rem;
   gap: 0.5rem;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  width: 400px;              
+  width: 400px;
   max-width: 34vw;
-  margin-top: 0;           
 }
 
-/* The tip line above the image */
 .pushup-tip-plain{
-  margin: 0 0 10px 0;       
   font-weight: 700;
   color: #fff;
   background: rgba(0,0,0,0.45);
@@ -73,9 +48,7 @@
   border-radius: 8px;
 }
 
-/* Reference image — remove the paddings that push it down */
 .pushup-pose-img{
-  display: block;
   width: 400px;
   max-width: 34vw;
   height: auto;
@@ -85,30 +58,88 @@
   -webkit-user-drag: none;
 }
 
-.reset-btn {
-  padding: 10px 22px;
-  font-size: 16px;
-  font-weight: 600;
+.status-line {
+  margin-top: 2px;
+  font-size: 18px;
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+/* === Admin Timer Box === */
+.timer-box {
+  width: min(600px, 50vw);
+  height: 8rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  border-radius: 14px;
+  background: rgba(20, 20, 20, 0.7);          /* darker translucent base */
+  backdrop-filter: blur(10px);                /* soft glass blur */
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45); /* soft depth shadow */
   color: #fff;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 10px;
-  backdrop-filter: blur(8px);
-  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.timer-box:hover {
+  background: rgba(30, 30, 30, 0.82);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.55);
+}
+
+.timer-box-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.timer-box-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  opacity: 0.9;
+}
+
+.timer-box-chip {
+  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.1);
+  font-weight: 500;
+}
+
+.timer-box-value {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  margin: 8px 0;
+}
+.timer-box-value span {
+  font-size: 16px;
+  margin-left: 4px;
+  opacity: 0.85;
+}
+
+.timer-box-bar {
+  height: 2px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.timer-box-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff7a4d, #ff3e7f);
+  transition: width 100ms linear;
+}
+
+.timer-box-hint {
   margin-top: 10px;
-  transition: all 0.25s ease;
-  letter-spacing: 0.4px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.35);
-}
-
-.reset-btn:hover {
-  background: rgba(235, 33, 33, 0.18);
-  border-color: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.45);
-}
-
-.reset-btn:active {
-  transform: scale(0.95);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  font-size: 13px;
+  opacity: 0.75;
+  text-align: center;
 }
