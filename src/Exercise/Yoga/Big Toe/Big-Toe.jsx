@@ -13,12 +13,18 @@ import {
 import { db } from "../../../firebase";
 import { doc, onSnapshot } from "firebase/firestore";
 
+import BridgePose from "../Bridge/BridgePose";
+
 /* Landmark IDs:
    Left: 11 Sh, 23 Hip, 25 Knee, 27 Ankle, 15 Wrist, 31 BigToe
    Right:12 Sh, 24 Hip, 26 Knee, 28 Ankle, 16 Wrist, 32 BigToe
 */
 
 export default function BigToe({ holdMs = 10000, badResetMs = 3000 }) {
+  const [nextYoga, setNextYoga] = useState(false);
+  const stripRef = useRef(null);
+  const bridgeRef = useRef(null);
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const landmarkerRef = useRef(null);
@@ -81,6 +87,15 @@ export default function BigToe({ holdMs = 10000, badResetMs = 3000 }) {
     if (Math.abs(vsL - vsR) < 0.5) return dL <= dR ? "left" : "right";
     return vsL > vsR ? "left" : "right";
   };
+  
+  useEffect(() => {
+  if (nextYoga) {
+    // small delay so Bridge slide mounts, then scroll
+    requestAnimationFrame(() => {
+      bridgeRef.current?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+    });
+  }
+}, [nextYoga]);
 
   // --- listen to Firestore poseRules/bigtoe document for live updates ---
   useEffect(() => {
@@ -377,6 +392,9 @@ export default function BigToe({ holdMs = 10000, badResetMs = 3000 }) {
     : "0.0";
 
   return (
+      <div className="yoga-strip" ref={stripRef}>
+    {/* Slide 1: Big Toe */}
+    <section className="yoga-slide">
     <div className="bt-container">
       <h2 className="stoke-text boe">Big Toe Pose – Padangushthasana</h2>
 
@@ -417,17 +435,29 @@ export default function BigToe({ holdMs = 10000, badResetMs = 3000 }) {
         Side view only: hip ≤ {hipAngleLimitState}°, knee ≥ 165°, wrist near big toe. (Small flickers won’t reset the timer.)
       </p>
 
-      {showDone && (
-        <div className="bt-done">
-          <div className="bt-done-card">
-            <h3>Great job! ✅</h3>
-            <p>You held the pose for {(holdMsState / 1000) | 0} seconds.</p>
-            <button className="resetbutton" onClick={() => window.location.reload()}>
-              Restart Camera
-            </button>
+    {showDone && !nextYoga && (
+          <div className="bt-done">
+            <div className="bt-done-card">
+              <h3>Great job! ✅</h3>
+              <p>You held the pose for {(holdMsState / 1000) | 0} seconds.</p>
+              <button
+                className="resetbutton"
+                onClick={() => { setNextYoga(true); setShowDone(false); }}
+              >
+                Do next Yoga
+              </button>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
+        )}
+      </div>
+    </section>
+
+    {/* Slide 2: Bridge */}
+    {nextYoga && (
+      <section className="yoga-slide" ref={bridgeRef}>
+        <BridgePose />
+      </section>
+    )}
+  </div>
+);
 }

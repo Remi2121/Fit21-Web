@@ -114,3 +114,126 @@ display: inline-block;
 margin-right: 6px;
 }
 
+
+/* wrapper stays the same */
+.password-field {
+  position: relative;
+  width: 100%;
+}
+
+/* make room on the right for the icon */
+.password-field > input {
+  width: 100%;
+  padding-right: 44px;    /* space for eye icon on right */
+  padding-left: 8px;
+  box-sizing: border-box;
+}
+
+/* RIGHT-ALIGNED eye button inside the input */
+.login-popup-inputs .password-field .toggle-password {
+  position: absolute;
+  right: 8px;
+  top: 0.8rem;
+  bottom: 0;              /* full height of the input */
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background-color: rgb(255, 254, 254);
+  border-radius: 2rem;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.8;
+  appearance: none;
+  box-shadow: none;
+}
+
+.login-popup-inputs .password-field .toggle-password:hover,
+.login-popup-inputs .password-field .toggle-password:focus {
+  opacity: 1;
+  outline: none;
+}
+
+/* optional: keep the svg fitting nicely */
+.login-popup-inputs .password-field .toggle-password svg {
+  pointer-events: none;   /* click passes to button */
+}
+
+/* =========================
+   📱 Mobile Optimizations
+   ========================= */
+@media (max-width: 480px) {
+  /* container spacing */
+  .login-box {
+    padding: 0 1rem;
+    width: 100%;
+  }
+
+  .login-popup-container {
+    width: 92vw;
+    max-width: 92vw;
+    padding: 1rem 1rem;
+    border-radius: 12px;
+  }
+
+  /* avoid iOS zoom on focus (>=16px) + bigger touch targets */
+  .login-popup-inputs input,
+  .login-popup-inputs button,
+  .google-btn {
+    font-size: 16px;
+    padding: 12px 14px;
+    border-radius: 8px;
+  }
+
+  /* password input needs extra room for the icon */
+  .password-field > input {
+    padding-right: 56px; /* more space for larger eye */
+  }
+
+  /* right-side eye button: bigger tap target, perfect vertical center */
+  .login-popup-inputs .password-field .toggle-password {
+    right: 10px;
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+    width: 40px;          /* 40x40 for comfy tap */
+    height: 40px;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /* if you prefer no pill bg on mobile, uncomment next line */
+    /* background: transparent !important; */
+  }
+
+  /* white eye icon for dark inputs */
+  .login-popup-inputs .password-field .toggle-password svg {
+    width: 22px;
+    height: 22px;
+    stroke: #fff;           /* 👁️ white */
+    color: #fff;
+    stroke-width: 2;
+  }
+
+  /* buttons full width already; add spacing */
+  .login-popup-inputs button,
+  .google-btn {
+    margin-top: 10px;
+  }
+
+  /* tighten title spacing */
+  .login-popup-title {
+    margin-bottom: 0.75rem;
+  }
+}
+
+/* 🚫 On touch devices, ignore hover color jumps */
+@media (hover: none) {
+  .login-popup-inputs button:hover {
+    background-color: #bdb6b8;
+  }
+}

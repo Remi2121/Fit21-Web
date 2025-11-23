@@ -16,14 +16,14 @@ import { doc, onSnapshot } from "firebase/firestore";
 const SHOW_HUD = false;
 
 // ---- tunables (easy to tweak later) ----
-const HIP_GAP_MIN = 0.018;      
+const HIP_GAP_MIN = 0.020;      
 const KNEE_MIN = 60, KNEE_MAX = 120;
 const SHIN_HORIZ_MAX = 0.08;
 const NEAR_FOOT_MARGIN = 0.010;
 const FAR_FOOT_MARGIN  = 0.006;
 const FAR_VIS_MIN = 0.35;
 const HEAD_VIS_MIN = 0.50;
-const HEAD_FLOOR_MARGIN = -0.025;
+const HEAD_FLOOR_MARGIN = -0.50;
 
 export default function BridgePose({ holdMs = 10000, badResetMs = 3000 }) {
   const videoRef = useRef(null);
@@ -243,14 +243,16 @@ export default function BridgePose({ holdMs = 10000, badResetMs = 3000 }) {
       const headOK = headDelta > HEAD_FLOOR_MARGIN;
       const headVisible = (eye?.visibility ?? 0) > HEAD_VIS_MIN || (ear?.visibility ?? 0) > HEAD_VIS_MIN;
 
-      // scoring: need 3/4 core; gate far-foot & head only if visible
-      const core = [hipGapOK, kneeOK, shinOK, nearFootOK];
-      const coreScore = core.reduce((a,b)=>a+(b?1:0),0);
-      let pass = coreScore >= 3;
-      if (farVis > FAR_VIS_MIN) pass = pass && farFootOK;
-      if (headVisible)          pass = pass && headOK;
+// ----- STRICT SCORING: all 5 must be true (head must be visible + OK) -----
+      const fiveChecks = [
+        hipGapOK,           // 1) hip above shoulder
+        kneeOK,             // 2) knee ~90°
+        shinOK,             // 3) shin roughly vertical
+        nearFootOK,         // 4) near foot on floor
+        (headVisible && headOK), // 5) head must be visible AND correct
+      ];
 
-      // HUD save
+      // HUD save (score shown out of 5; far-foot shown separately)
       dbgRef.current = {
         hipGap, hipGapOK,
         kneeAngle, kneeOK,
@@ -258,8 +260,12 @@ export default function BridgePose({ holdMs = 10000, badResetMs = 3000 }) {
         feetNearOK: nearFootOK,
         feetFarOK: farFootOK,
         headDelta, headOK,
-        score: coreScore + (farVis>FAR_VIS_MIN && farFootOK ? 1:0) + (headVisible && headOK ? 1:0),
+        headVisible,
+        score: fiveChecks.reduce((a,b)=>a+(b?1:0),0),
       };
+
+      // final pass only if ALL 5 conditions are true
+      const pass = fiveChecks.every(Boolean);
 
       // smoothing: 4/8 frames
       passBuf.current[passIdx.current] = pass;

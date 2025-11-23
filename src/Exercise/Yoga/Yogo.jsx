@@ -7,9 +7,8 @@ const Yogo = () => {
   return (
     <div>
       <BigToe/>
-      <ChairPose/>
-      <Bridge/>
-      <WarriorIII/>
+    
+
       
     </div>
   )

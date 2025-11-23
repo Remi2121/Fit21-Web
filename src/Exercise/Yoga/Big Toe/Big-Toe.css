@@ -1,78 +1,75 @@
-.bt-container{
-  text-align:center;
-  padding:16px 10px 24px;
-  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  background:  radial-gradient(1200px 700px at 20% 0%, #2f0303 0%, transparent 60%),
-    linear-gradient(135deg, #242425, #21050a);
+/* ===== Big Toe Pose (Padangushthasana) — FULL CSS ===== */
 
+.bt-container {
+  text-align: center;
+  padding: 16px 10px 24px;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: radial-gradient(1200px 700px at 20% 0%, #2f0303 0%, transparent 60%),
+    linear-gradient(135deg, #242425, #21050a);
 }
 
-.bt-container h2{
+.bt-container h2 {
   margin: 6px 0 10px;
   font-weight: bold;
   letter-spacing: 0.2px;
-  font-size:  2rem;
- 
+  font-size: 2rem;
+  color: #fff;
 }
 
-.bt-canvas{
-  width: 640px;
-  max-width: 94vw;
-  height: auto;
-  border: 4px solid #444;
-  border-radius: 14px;
-  background:#000;
-  box-shadow: 0 10px 22px rgba(0,0,0,.35);
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
-}
-
-/* NEW — Green border when correct pose */
-.bt-canvas.good{
-  border-color: #11ff44;
-  box-shadow: 0 0 25px rgba(17,255,68,0.7);
-}
-
-/* NEW — Red border when incorrect pose */
-.bt-canvas.bad{
-  border-color: #f04d4d;
-  box-shadow: 0 0 25px rgba(255,68,68,0.6);
-}
-
-/* Make the two columns top-align */
-.bt-stage{
+/* Stage + Canvas */
+.bt-stage {
   padding-top: 1rem;
   margin: 8px auto 0;
   display: flex;
-  align-items: flex-start;   
+  align-items: flex-start;
   justify-content: center;
   gap: 16px;
   flex-wrap: wrap;
 }
 
-/* Right column wrapper */
-.bt-ref-plain{
+.bt-canvas {
+  width: 640px;
+  max-width: 94vw;
+  height: auto;
+  border: 4px solid #444;
+  border-radius: 14px;
+  background: #000;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.bt-canvas.good {
+  border-color: #11ff44;
+  box-shadow: 0 0 25px rgba(17, 255, 68, 0.7);
+}
+
+.bt-canvas.bad {
+  border-color: #f04d4d;
+  box-shadow: 0 0 25px rgba(255, 68, 68, 0.6);
+}
+
+/* Right column (reference) */
+.bt-ref-plain {
   padding-left: 1.5rem;
   gap: 0.5rem;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  width: 400px;              
+  width: 400px;
   max-width: 34vw;
-  margin-top: 0;           
+  margin-top: 0;
 }
 
-/* The tip line above the image */
-.bt-tip-plain{
-  margin: 0 0 10px 0;       
+.bt-tip-plain {
+  margin: 0 0 10px 0;
   font-weight: 700;
   color: #fff;
-  background: rgba(0,0,0,0.45);
+  background: rgba(0, 0, 0, 0.45);
   padding: 8px 10px;
   border-radius: 8px;
 }
 
-/* Reference image — remove the paddings that push it down */
-.bt-pose-img{
+.bt-pose-img {
   display: block;
   width: 400px;
   max-width: 34vw;
@@ -83,54 +80,91 @@
   -webkit-user-drag: none;
 }
 
-/* Stack on small screens */
-@media (max-width: 900px){
-  .bt-stage{ flex-direction: column; align-items: center; gap: 12px; }
-  .bt-ref-plain{ width: min(460px, 92vw); max-width: 92vw; align-items: center; }
-  .bt-tip-plain{ text-align: center; }
-  .bt-pose-img{ width: 100%; max-width: 100%; }
-}
-
-
-
-@media (max-width: 768px){
-  .bt-canvas{
-    height: 60vh;
+/* Responsive */
+@media (max-width: 900px) {
+  .bt-stage {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
   }
+  .bt-ref-plain {
+    width: min(460px, 92vw);
+    max-width: 92vw;
+    align-items: center;
+  }
+  .bt-tip-plain { text-align: center; }
+  .bt-pose-img { width: 100%; max-width: 100%; }
 }
 
-.bt-status{
+@media (max-width: 768px) {
+  .bt-canvas { height: 60vh; }
+}
+
+/* Status bar */
+.bt-status {
   display: flex;
   padding-top: 1rem;
-  margin-top:10px;
-  font-size:1rem;
-  color:#f9f9f9;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:10px;
+  margin-top: 10px;
+  font-size: 1rem;
+  color: #f9f9f9;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
 
-.bt-status .bt-label{
-  font-weight:700;
-  color:#ffffff;
+.bt-status .bt-label {
+  font-weight: 700;
+  color: #ffffff;
 }
 
-.bt-status .bt-sep{
-  width:1px; height:16px; background:#555; display:inline-block;
+.bt-status .bt-sep {
+  width: 1px;
+  height: 16px;
+  background: #555;
+  display: inline-block;
 }
 
-.bt-note{
-  max-width:640px;
-  margin:14px auto 0;
-  font-size:15px;
-  color:#c9c9c9;
-  line-height:1.8;
+/* Note */
+.bt-note {
+  max-width: 640px;
+  margin: 14px auto 0;
+  font-size: 15px;
+  color: #c9c9c9;
+  line-height: 1.8;
 }
 
+/* ===== Modal (match Bridge style) ===== */
+.bt-done {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;   /* center vertically */
+  justify-content: center;
+  z-index: 50;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.bt-done-card {
+  width: min(520px, 92vw);
+  background: linear-gradient(180deg, #111827, #0b1020);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+  text-align: center;
+  animation: scaleIn 0.3s ease-out;
+}
+
+.bt-done-card h3,
+.bt-done-card p {
+  color: #fff;
+}
+
+/* Button (shared) */
 .resetbutton {
   padding: 10px 20px;
-  background: #f65050;                
+  background: #4f8df6;                 /* nicer blue for "Do next Yoga" */
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -139,25 +173,52 @@
   font-weight: 600;
   margin-top: 10px;
   transition: 0.25s ease;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
 }
 
-/* Hover effect */
 .resetbutton:hover {
-  background: #ff1f1f;
+  background: #2e75ff;
   transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
 }
 
-/* Click effect */
-.resetbutton:active {
-  transform: scale(0.96);
+.resetbutton:active { transform: scale(0.96); }
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
-.bt-done-card h3{
-  color: white;
+@keyframes scaleIn {
+  0%   { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1);   opacity: 1; }
 }
 
-.bt-done-card p{
-  color: white;
+/* Full vertical scroll container */
+.yoga-vertical {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow-y: auto;     /* allow Y direction scroll */
+  overflow-x: hidden;   /* disable X scroll */
+  scroll-behavior: smooth;
+}
+
+/* Each section takes full viewport height (optional) */
+.yoga-section {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Hide X scrollbar */
+.yoga-vertical::-webkit-scrollbar {
+  width: 8px;
+}
+.yoga-vertical::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
 }
