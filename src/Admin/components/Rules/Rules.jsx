@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-useless-computed-key */
 // src/Admin/components/Rules/Rules.jsx
 import React, { useEffect, useState } from "react";
@@ -62,7 +63,6 @@ export default function Rules() {
     })();
 
     return () => unsub && unsub();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const validateBigToe = () => {
@@ -158,7 +158,6 @@ export default function Rules() {
     })();
 
     return () => unsub && unsub();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const validatePushup = () => {
@@ -246,7 +245,6 @@ export default function Rules() {
     })();
 
     return () => unsub && unsub();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const validateBridge = () => {
@@ -288,7 +286,7 @@ export default function Rules() {
     setTimeout(() => setBpMsg(""), 2500);
   };
 
-  // ===== Squat (NEW) =====
+  // ===== Squat (existing) =====
   // Same schema as push-up: Seconds, maxPoints, "maximumcount perday", updatedAt
   const squatRef = doc(db, "poseRules", "squat");
   const [sqSeconds, setSqSeconds] = useState("");
@@ -330,7 +328,6 @@ export default function Rules() {
     })();
 
     return () => unsub && unsub();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const validateSquat = () => {
@@ -382,6 +379,91 @@ export default function Rules() {
     setSqPerDayMax(20);
     setSqMsg("Defaults applied (not saved). Click Save to persist.");
     setTimeout(() => setSqMsg(""), 2500);
+  };
+
+  // ===== Plank (NEW) =====
+  // Schema exactly as you asked:
+  // { Seconds: number, maxPoints: number, updatedAt: serverTimestamp() }
+  const plankRef = doc(db, "poseRules", "plank");
+  const [plSeconds, setPlSeconds] = useState("");
+  const [plMaxPoints, setPlMaxPoints] = useState("");
+  const [plSaving, setPlSaving] = useState(false);
+  const [plMsg, setPlMsg] = useState("");
+
+  useEffect(() => {
+    const unsub = onSnapshot(
+      plankRef,
+      (snap) => {
+        if (snap.exists()) {
+          const d = snap.data();
+          const s = d?.Seconds;
+          const mp = d?.maxPoints;
+          setPlSeconds(typeof s === "number" ? s : "");
+          setPlMaxPoints(typeof mp === "number" ? mp : "");
+        } else {
+          setPlSeconds("");
+          setPlMaxPoints("");
+        }
+      },
+      (err) => {
+        console.error("Plank rules onSnapshot:", err);
+        setPlMsg("Failed to subscribe to Plank rules.");
+      }
+    );
+
+    (async () => {
+      try {
+        await getDoc(plankRef);
+      } catch (e) {
+        console.warn("Initial Plank read failed:", e);
+      }
+    })();
+
+    return () => unsub && unsub();
+  }, []);
+
+  const validatePlank = () => {
+    setPlMsg("");
+    const s = Number(plSeconds);
+    const mp = Number(plMaxPoints);
+    if (plSeconds === "" || isNaN(s) || s <= 0) {
+      setPlMsg("Enter a valid hold time (seconds > 0).");
+      return false;
+    }
+    if (plMaxPoints === "" || isNaN(mp) || mp <= 0) {
+      setPlMsg("Enter a valid maxPoints (> 0).");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSavePlank = async (e) => {
+    e?.preventDefault?.();
+    if (!validatePlank()) return;
+    setPlMsg("");
+    setPlSaving(true);
+    try {
+      const payload = {
+        Seconds: Number(plSeconds),
+        maxPoints: Number(plMaxPoints),
+        updatedAt: serverTimestamp(),
+      };
+      await setDoc(plankRef, payload, { merge: true });
+      setPlMsg("✅ Plank rules saved.");
+    } catch (err) {
+      console.error("Save Plank rules error:", err);
+      setPlMsg("❌ Failed to save Plank rules. See console.");
+    } finally {
+      setPlSaving(false);
+      setTimeout(() => setPlMsg(""), 3000);
+    }
+  };
+
+  const handleResetDefaultsPlank = () => {
+    setPlSeconds(60);
+    setPlMaxPoints(10);
+    setPlMsg("Defaults applied (not saved). Click Save to persist.");
+    setTimeout(() => setPlMsg(""), 2500);
   };
 
   if (loading) return <div className="rules-wrap">Loading rules…</div>;
@@ -525,7 +607,7 @@ export default function Rules() {
         {puMsg && <div className="rules-msg">{puMsg}</div>}
       </form>
 
-      {/* ===== Squat section (NEW) ===== */}
+      {/* ===== Squat section (existing) ===== */}
       <h2 className="rules-title" style={{ marginTop: 28 }}>
         Pose Rules — Squat (admin)
       </h2>
@@ -581,6 +663,52 @@ export default function Rules() {
         </div>
 
         {sqMsg && <div className="rules-msg">{sqMsg}</div>}
+      </form>
+
+      {/* ===== Plank section (NEW) ===== */}
+      <h2 className="rules-title" style={{ marginTop: 28 }}>
+        Pose Rules — Plank (admin)
+      </h2>
+
+      <form className="rules-form" onSubmit={handleSavePlank}>
+        <label className="rules-label">
+          Seconds (hold time)
+          <input
+            className="rules-input"
+            type="number"
+            value={plSeconds}
+            onChange={(e) => setPlSeconds(e.target.value)}
+            min="1"
+            step="1"
+          />
+        </label>
+
+        <label className="rules-label">
+          maxPoints
+          <input
+            className="rules-input"
+            type="number"
+            value={plMaxPoints}
+            onChange={(e) => setPlMaxPoints(e.target.value)}
+            min="1"
+            step="1"
+          />
+        </label>
+
+        <div className="rules-actions">
+          <button className="rules-save" type="submit" disabled={plSaving}>
+            {plSaving ? "Saving…" : "Save rules"}
+          </button>
+          <button
+            type="button"
+            className="rules-default"
+            onClick={handleResetDefaultsPlank}
+          >
+            Reset defaults
+          </button>
+        </div>
+
+        {plMsg && <div className="rules-msg">{plMsg}</div>}
       </form>
     </div>
   );
