@@ -10,7 +10,9 @@ import {
 } from "@mediapipe/tasks-vision";
 
 import { db } from "../../../firebase";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
+
 
 // set true only to see debug numbers (unmirrored)
 const SHOW_HUD = false;
@@ -45,6 +47,21 @@ export default function BridgePose({ holdMs = 10000, badResetMs = 3000 }) {
   const [holdMsState, setHoldMsState] = useState(holdMs);
   const holdRef = useRef(holdMsState);
   const lastConfigTsRef = useRef(0);
+
+  // === one-save-per-day ===
+  const savingRef = useRef(false);
+  // eslint-disable-next-line no-unused-vars
+  const [alreadyDone, setAlreadyDone] = useState(false);
+  const [alreadyPopup, setAlreadyPopup] = useState(false);
+
+  const todayStrLocal = () => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
 
   // HUD values (only if SHOW_HUD)
   const dbgRef = useRef({
@@ -97,6 +114,54 @@ export default function BridgePose({ holdMs = 10000, badResetMs = 3000 }) {
     });
     return () => unsub();
   }, []);
+
+    // Check on mount if already saved today
+  useEffect(() => {
+    (async () => {
+      try {
+        const auth = getAuth();
+        const uid = auth.currentUser?.uid;
+        if (!uid) return;
+        const ref = doc(db, "users", uid, "exercises", "bridge", "days", todayStrLocal());
+        const snap = await getDoc(ref);
+        if (snap.exists()) setAlreadyDone(true);
+      } catch (e) {
+        console.error("bridge already-done check failed:", e);
+      }
+    })();
+  }, []);
+
+    // Save once per day
+  const saveBridgeForToday = async () => {
+    if (savingRef.current) return;
+    try {
+      const auth = getAuth();
+      const uid = auth.currentUser?.uid;
+      if (!uid) {
+        alert("Please sign in first.");
+        return;
+      }
+      const dayId = todayStrLocal();
+      const ref = doc(db, "users", uid, "exercises", "bridge", "days", dayId);
+      const existing = await getDoc(ref);
+      if (existing.exists()) {
+        setAlreadyDone(true);
+        setAlreadyPopup(true);
+        return;
+      }
+      savingRef.current = true;
+      await setDoc(ref, {
+        date: dayId,
+        points: 5,
+        savedAt: serverTimestamp(),
+      });
+      setAlreadyDone(true);
+    } catch (e) {
+      console.error("saveBridgeForToday error:", e);
+    } finally {
+      savingRef.current = false;
+    }
+  };
 
   // camera + loop
   useEffect(() => {
@@ -340,17 +405,39 @@ export default function BridgePose({ holdMs = 10000, badResetMs = 3000 }) {
         <span className="bp-label">Hold:</span> {progressSec}s / {(holdMsState / 1000) | 0}s
       </div>
 
+      {/* rules note */}
+      <p className="bp-note">
+        Rules: hip above shoulder, knee between {KNEE_MIN}–{KNEE_MAX}°, shin near vertical, near foot touching floor, and head visible & on the floor. (Small flickers won’t reset the timer.)
+      </p>
+
       {showDone && (
         <div className="bp-done">
           <div className="bp-done-card">
             <h3>Excellent! ✅</h3>
             <p>You held the bridge pose for {(holdMsState / 1000) | 0} seconds.</p>
-            <button className="resetbutton" onClick={() => window.location.reload()}>
-              Restart Camera
-            </button>
+            <div className="bp-done-actions">
+              <button className="resetbutton" onClick={async () => { await saveBridgeForToday(); }}>
+                Save Today
+              </button>
+              <button className="resetbutton" onClick={() => window.location.reload()}>
+                Restart Camera
+              </button>
+            </div>
           </div>
         </div>
       )}
+
+      {/* already-finished popup */}
+      {alreadyPopup && (
+        <div className="bp-done">
+          <div className="bp-done-card">
+            <h3>Already finished today 🎉</h3>
+            <p>You’ve already completed Bridge for {todayStrLocal()}.</p>
+            <button className="resetbutton" onClick={() => setAlreadyPopup(false)}>OK</button>
+          </div>
+        </div>
+      )}
+      
     </div>
   );
 }
