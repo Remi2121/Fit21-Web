@@ -10,11 +10,24 @@ import {
   deleteAllForDay,
 } from "../services/quizService"; // path correct nu check pannunga
 
+// Firestore helpers
+import {
+  collection,
+  doc,
+  getDocs,
+  query,
+  where,
+  writeBatch,
+  setDoc,
+} from "firebase/firestore";
+import { db } from "../services/firebase"; // adjust if needed
+
 export default function QuizSection() {
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // ===== Create/Update Quiz form =====
   const [form, setForm] = useState({
     day: "",
     question: "",
@@ -24,10 +37,19 @@ export default function QuizSection() {
     optionD: "",
     correctOption: "A",
   });
-
   const [editingId, setEditingId] = useState(null);
 
-  // ovoru question-ku 90 sec (1.5 mins)
+  // ===== Per-day settings controller (top) =====
+  const [daySettingsInput, setDaySettingsInput] = useState({
+    day: 1,
+    maxPoints: 20,
+    timeLimitMinutes: 10,
+  });
+
+  // Cache of saved per-day settings: { [dayNumber]: { maxPoints, timeLimitMinutes } }
+  const [daySettingsMap, setDaySettingsMap] = useState({}); // e.g., {1: {maxPoints:20, timeLimitMinutes:10}}
+
+  // Existing timer used in summary for published questions (you can keep/change)
   const TIME_PER_QUESTION_SEC = 90;
 
   // ---------- LOAD ALL QUIZZES ----------
@@ -51,8 +73,33 @@ export default function QuizSection() {
     }
   }
 
+  // ---------- LOAD PER-DAY SETTINGS ----------
+  async function loadDaySettings() {
+    try {
+      const snap = await getDocs(collection(db, "quizDaySettings"));
+      const map = {};
+      snap.forEach((d) => {
+        const v = d.data();
+        if (typeof v?.day === "number") {
+          map[v.day] = {
+            maxPoints:
+              typeof v?.maxPoints === "number" ? v.maxPoints : 20,
+            timeLimitMinutes:
+              typeof v?.timeLimitMinutes === "number"
+                ? v.timeLimitMinutes
+                : 10,
+          };
+        }
+      });
+      setDaySettingsMap(map);
+    } catch (err) {
+      console.error("Error loading day settings:", err);
+    }
+  }
+
   useEffect(() => {
     loadQuizzes();
+    loadDaySettings();
   }, []);
 
   // ---------- FORM HANDLERS ----------
@@ -80,10 +127,8 @@ export default function QuizSection() {
   async function handleSave(e) {
     e.preventDefault();
 
-    console.log("FORM BEFORE SAVE:", form); // debug-ku
-
     const quizData = {
-      day: Number(form.day) || 0, // later validation add panna laam
+      day: Number(form.day) || 0,
       question: form.question || "",
       optionA: form.optionA || "",
       optionB: form.optionB || "",
@@ -103,6 +148,8 @@ export default function QuizSection() {
 
       resetForm();
       await loadQuizzes();
+
+      if (quizData.day) await recomputeAndWriteDayDerived(quizData.day);
     } catch (err) {
       console.error("Error saving quiz:", err);
       setError("Failed to save quiz.");
@@ -128,8 +175,13 @@ export default function QuizSection() {
 
     try {
       setError("");
+      const qz = quizzes.find((q) => q.id === id);
+      const day = qz?.day;
+
       await deleteQuiz(id);
       await loadQuizzes();
+
+      if (day) await recomputeAndWriteDayDerived(day);
     } catch (err) {
       console.error("Error deleting quiz:", err);
       setError("Failed to delete quiz.");
@@ -141,6 +193,8 @@ export default function QuizSection() {
       setError("");
       await updateQuiz(quiz.id, { ...quiz, published: true });
       await loadQuizzes();
+
+      if (quiz.day) await recomputeAndWriteDayDerived(quiz.day);
     } catch (err) {
       console.error("Error publishing quiz:", err);
       setError("Failed to publish quiz.");
@@ -152,6 +206,8 @@ export default function QuizSection() {
       setError("");
       await publishAllForDay(day);
       await loadQuizzes();
+
+      await recomputeAndWriteDayDerived(day);
     } catch (err) {
       console.error("Error publishing all:", err);
       setError("Failed to publish all quizzes for this day.");
@@ -171,11 +227,108 @@ export default function QuizSection() {
       setError("");
       await deleteAllForDay(day);
       await loadQuizzes();
+
+      await recomputeAndWriteDayDerived(day);
     } catch (err) {
       console.error("Error deleting all quizzes for day:", err);
       setError("Failed to delete all quizzes for this day.");
     }
   }
+
+  // ---------- SAVE DAY SETTINGS (max points + time limit) ----------
+  async function saveDaySettings(e) {
+    e.preventDefault();
+    const day = Number(daySettingsInput.day);
+    const maxPoints = Number(daySettingsInput.maxPoints);
+    const timeLimitMinutes = Number(daySettingsInput.timeLimitMinutes);
+
+    if (!day || day < 1 || day > 21) {
+      setError("Please enter a valid day (1–21).");
+      return;
+    }
+    if (!Number.isFinite(maxPoints) || maxPoints < 0) {
+      setError("Please enter a valid maximum points value.");
+      return;
+    }
+    if (!Number.isFinite(timeLimitMinutes) || timeLimitMinutes < 0) {
+      setError("Please enter a valid time limit (minutes).");
+      return;
+    }
+
+    try {
+      setError("");
+      await setDoc(
+        doc(db, "quizDaySettings", `day_${day}`),
+        {
+          day,
+          maxPoints,
+          timeLimitMinutes,
+          updatedAt: new Date(),
+        },
+        { merge: true }
+      );
+
+      // Update local cache
+      setDaySettingsMap((prev) => ({
+        ...prev,
+        [day]: { maxPoints, timeLimitMinutes },
+      }));
+
+      // Recompute derived fields for that day
+      await recomputeAndWriteDayDerived(day);
+    } catch (err) {
+      console.error("Error saving day settings:", err);
+      setError("Failed to save settings for this day.");
+    }
+  }
+
+  // ---------- CORE: Update each quiz in a day ----------
+  // Sets both: ponits_for_this_question & timeLimitMinutes
+  async function recomputeAndWriteDayDerived(day) {
+    try {
+      const q = query(
+        collection(db, "quizQuestions"),
+        where("day", "==", Number(day))
+      );
+      const snap = await getDocs(q);
+
+      const totalCount = snap.size;
+
+      const settings = daySettingsMap?.[day] || {
+        maxPoints: 20,
+        timeLimitMinutes: 10,
+      };
+      const perQuestion =
+        totalCount > 0 ? settings.maxPoints / totalCount : 0;
+
+      const batch = writeBatch(db);
+      snap.forEach((d) => {
+        batch.update(doc(db, "quizQuestions", d.id), {
+          // exact field name as requested:
+          ponits_for_this_question: perQuestion,
+          timeLimitMinutes: settings.timeLimitMinutes,
+        });
+      });
+      await batch.commit();
+      // console.log(`Day ${day}: perQ=${perQuestion}, time=${settings.timeLimitMinutes}m`);
+    } catch (err) {
+      console.error("Error updating quizzes for day:", err);
+    }
+  }
+
+  // When quizzes OR settings map changes, recompute for all days shown
+  useEffect(() => {
+    if (!quizzes || quizzes.length === 0) return;
+    const uniqueDays = Array.from(new Set(quizzes.map((q) => q.day))).sort(
+      (a, b) => a - b
+    );
+    (async () => {
+      for (const d of uniqueDays) {
+        await recomputeAndWriteDayDerived(d);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quizzes, daySettingsMap]);
 
   // ---------- UI ----------
   return (
@@ -204,7 +357,124 @@ export default function QuizSection() {
         </div>
       )}
 
-      {/* ===== FORM ===== */}
+      {/* ===== DAY SETTINGS CONTROLLER ===== */}
+      <form
+        onSubmit={saveDaySettings}
+        style={{
+          marginBottom: "1.25rem",
+          padding: "1rem",
+          borderRadius: "12px",
+          background: "rgba(0,0,0,0.5)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          display: "grid",
+          gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
+          gap: "0.75rem",
+          alignItems: "end",
+        }}
+      >
+        <div>
+          <label style={{ fontSize: "0.85rem" }}>Day (1 - 21)</label>
+          <input
+            type="number"
+            min="1"
+            max="21"
+            value={daySettingsInput.day}
+            onChange={(e) =>
+              setDaySettingsInput((p) => ({
+                ...p,
+                day: Number(e.target.value),
+              }))
+            }
+            style={{
+              width: "100%",
+              marginTop: "0.25rem",
+              padding: "0.4rem 0.6rem",
+              borderRadius: "6px",
+              border: "1px solid #444",
+              background: "rgba(0,0,0,0.6)",
+              color: "#fff",
+            }}
+          />
+        </div>
+
+        <div style={{ gridColumn: "span 2 / span 2" }}>
+          <label style={{ fontSize: "0.85rem" }}>Maximum Points (for this day)</label>
+          <input
+            type="number"
+            step="1"
+            min="0"
+            value={daySettingsInput.maxPoints}
+            onChange={(e) =>
+              setDaySettingsInput((p) => ({
+                ...p,
+                maxPoints: Number(e.target.value),
+              }))
+            }
+            placeholder="20"
+            style={{
+              width: "100%",
+              marginTop: "0.25rem",
+              padding: "0.4rem 0.6rem",
+              borderRadius: "6px",
+              border: "1px solid #444",
+              background: "rgba(0,0,0,0.6)",
+              color: "#fff",
+            }}
+          />
+        </div>
+
+        <div style={{ gridColumn: "span 2 / span 2" }}>
+          <label style={{ fontSize: "0.85rem" }}>Time Limit (minutes, this day)</label>
+          <input
+            type="number"
+            step="1"
+            min="0"
+            value={daySettingsInput.timeLimitMinutes}
+            onChange={(e) =>
+              setDaySettingsInput((p) => ({
+                ...p,
+                timeLimitMinutes: Number(e.target.value),
+              }))
+            }
+            placeholder="10"
+            style={{
+              width: "100%",
+              marginTop: "0.25rem",
+              padding: "0.4rem 0.6rem",
+              borderRadius: "6px",
+              border: "1px solid #444",
+              background: "rgba(0,0,0,0.6)",
+              color: "#fff",
+            }}
+          />
+        </div>
+
+        <div>
+          <button
+            type="submit"
+            style={{
+              padding: "0.55rem 1.1rem",
+              borderRadius: "999px",
+              border: "none",
+              background: "linear-gradient(135deg,#16a34a,#22c55e)",
+              color: "#fff",
+              cursor: "pointer",
+              fontWeight: 500,
+              width: "100%",
+            }}
+          >
+            Save Day Settings 
+          </button>
+          <div style={{ marginTop: "0.55rem", fontSize: "0.55rem", color: "#bbb" }}>
+            Saved for Day {daySettingsInput.day}:{" "}
+            Max {daySettingsMap[daySettingsInput.day]?.maxPoints ?? 20},{" "}
+            Time {daySettingsMap[daySettingsInput.day]?.timeLimitMinutes ?? 10} min
+            {" "} (defaults shown if not set)
+          </div>
+        </div>
+      </form>
+
+      {/* ===== CREATE/UPDATE QUIZ FORM ===== */}
       <div
         style={{
           marginBottom: "2rem",
@@ -569,7 +839,7 @@ export default function QuizSection() {
           </div>
         )}
 
-        {/* Day-wise stats: how many published & total time */}
+        {/* Day-wise stats: published count → timer + points + saved time limit */}
         {quizzes.length > 0 && (
           <div
             style={{
@@ -581,7 +851,7 @@ export default function QuizSection() {
             }}
           >
             <div style={{ marginBottom: "0.4rem", fontWeight: 600 }}>
-              Day summary (published count → timer):
+              Day summary (published count → timer) & points:
             </div>
 
             {[...new Set(quizzes.map((q) => q.day))]
@@ -598,11 +868,23 @@ export default function QuizSection() {
                 const minutes = Math.floor(totalSeconds / 60);
                 const seconds = totalSeconds % 60;
 
+                const settings = daySettingsMap?.[day] || {
+                  maxPoints: 20,
+                  timeLimitMinutes: 10,
+                };
+                const perQuestion =
+                  totalCount > 0 ? settings.maxPoints / totalCount : 0;
+
                 return (
                   <div key={day}>
                     Day {day}: {publishedCount}/{totalCount} published →{" "}
                     {minutes} min{" "}
-                    {seconds.toString().padStart(2, "0")} sec
+                    {seconds.toString().padStart(2, "0")} sec |{" "}
+                    Max {settings.maxPoints} → 1 Q = {perQuestion} points |{" "}
+                    Time limit saved: {settings.timeLimitMinutes} min
+                    {" "}(stored in each quiz as <code>timeLimitMinutes</code> and
+                    {" "}
+                    <code>ponits_for_this_question</code>)
                   </div>
                 );
               })}
