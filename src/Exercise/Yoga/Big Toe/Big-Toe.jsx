@@ -11,7 +11,18 @@ import {
 
 // FIRESTORE imports
 import { db } from "../../../firebase";
-import { doc, onSnapshot } from "firebase/firestore";
+import {
+  doc,
+  onSnapshot,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+   increment,
+} from "firebase/firestore";
+
+import { getAuth } from "firebase/auth";
+
+import BridgePose from "../Bridge/BridgePose";
 
 /* Landmark IDs:
    Left: 11 Sh, 23 Hip, 25 Knee, 27 Ankle, 15 Wrist, 31 BigToe
@@ -19,6 +30,10 @@ import { doc, onSnapshot } from "firebase/firestore";
 */
 
 export default function BigToe({ holdMs = 10000, badResetMs = 3000 }) {
+  const [nextYoga, setNextYoga] = useState(false);
+  const stripRef = useRef(null);
+  const bridgeRef = useRef(null);
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const landmarkerRef = useRef(null);
@@ -55,6 +70,40 @@ export default function BigToe({ holdMs = 10000, badResetMs = 3000 }) {
   // Keep most-recent config timestamp so stale docs don't override newer settings
   const lastConfigTsRef = useRef(0);
 
+   // === One-save-per-day state ===
+  const savingRef = useRef(false);
+  // eslint-disable-next-line no-unused-vars
+  const [alreadyDone, setAlreadyDone] = useState(false);
+  const [alreadyPopup, setAlreadyPopup] = useState(false);
+
+  const todayStrLocal = () => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+   // Check on mount: did user already finish today?
+  useEffect(() => {
+    (async () => {
+      try {
+        const auth = getAuth();
+        const uid = auth.currentUser?.uid;
+        if (!uid) return;
+        const dayId = todayStrLocal();
+        const ref = doc(db, "users", uid, "exercises", "bigtoe", "days", dayId);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          setAlreadyDone(true);
+        }
+      } catch (e) {
+        console.error("check already done failed:", e);
+      }
+    })();
+  }, []);
+
+
   // --- utility helpers ---
   const angleDeg = (a, b, c) => {
     const abx = a.x - b.x,
@@ -81,6 +130,15 @@ export default function BigToe({ holdMs = 10000, badResetMs = 3000 }) {
     if (Math.abs(vsL - vsR) < 0.5) return dL <= dR ? "left" : "right";
     return vsL > vsR ? "left" : "right";
   };
+  
+  useEffect(() => {
+  if (nextYoga) {
+    // small delay so Bridge slide mounts, then scroll
+    requestAnimationFrame(() => {
+      bridgeRef.current?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+    });
+  }
+}, [nextYoga]);
 
   // --- listen to Firestore poseRules/bigtoe document for live updates ---
   useEffect(() => {
@@ -376,7 +434,64 @@ export default function BigToe({ holdMs = 10000, badResetMs = 3000 }) {
     ? Math.max(0, (performance.now() - greenSinceRef.current) / 1000).toFixed(1)
     : "0.0";
 
+
+  const POINTS_BIGTOE = 5;
+
+// === Save today result (idempotent per day) ===
+const saveBigToeForToday = async () => {
+  if (savingRef.current) return;
+  try {
+    const auth = getAuth();
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+      alert("Please sign in first.");
+      return;
+    }
+
+    const dayId = todayStrLocal();
+
+    // 1) Per-day record (idempotent)
+    const dayRef = doc(db, "users", uid, "exercises", "bigtoe", "days", dayId);
+    const existing = await getDoc(dayRef);
+    if (existing.exists()) {
+      setAlreadyDone(true);
+      setAlreadyPopup(true);
+      return;
+    }
+
+    savingRef.current = true;
+
+    // Write the day document
+    await setDoc(dayRef, {
+      date: dayId,
+      points: POINTS_BIGTOE, // was 5
+      savedAt: serverTimestamp(),
+    });
+
+    // 2) Bump user's finalScore atomically and update updatedAt
+    const userRef = doc(db, "users", uid);
+    await setDoc(
+      userRef,
+      {
+        finalScore: increment(POINTS_BIGTOE),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true } // creates the field/doc if missing
+    );
+
+    setAlreadyDone(true);
+  } catch (e) {
+    console.error("saveBigToeForToday error:", e);
+  } finally {
+    savingRef.current = false;
+  }
+};
+
+
   return (
+      <div className="yoga-strip" ref={stripRef}>
+    {/* Slide 1: Big Toe */}
+    <section className="yoga-slide">
     <div className="bt-container">
       <h2 className="stoke-text boe">Big Toe Pose – Padangushthasana</h2>
 
@@ -417,17 +532,46 @@ export default function BigToe({ holdMs = 10000, badResetMs = 3000 }) {
         Side view only: hip ≤ {hipAngleLimitState}°, knee ≥ 165°, wrist near big toe. (Small flickers won’t reset the timer.)
       </p>
 
-      {showDone && (
+    {showDone && !nextYoga && (
+          <div className="bt-done">
+            <div className="bt-done-card">
+              <h3>Great job! ✅</h3>
+              <p>You held the pose for {(holdMsState / 1000) | 0} seconds.</p>
+              <button
+                className="resetbutton"
+                onClick={async () => {
+                    await saveBigToeForToday(); // store to Firestore (only once per day)
+                    setShowDone(false);
+                    setNextYoga(true); // move to next Yoga
+                  }}
+              >
+                Do next Yoga
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+
+    {/* Slide 2: Bridge */}
+    {nextYoga && (
+      <section className="yoga-slide" ref={bridgeRef}>
+        <BridgePose />
+      </section>
+    )}
+
+    {/* Already finished popup */}
+      {alreadyPopup && (
         <div className="bt-done">
           <div className="bt-done-card">
-            <h3>Great job! ✅</h3>
-            <p>You held the pose for {(holdMsState / 1000) | 0} seconds.</p>
-            <button className="resetbutton" onClick={() => window.location.reload()}>
-              Restart Camera
+            <h3>Already finished today 🎉</h3>
+            <p>You’ve already completed Big Toe for {todayStrLocal()}.</p>
+            <button className="resetbutton" onClick={() => setAlreadyPopup(false)}>
+              OK
             </button>
           </div>
         </div>
       )}
-    </div>
-  );
+  </div>
+);
 }

@@ -8,27 +8,74 @@ import { db } from "../firebase";
 import {
   collection,
   getDocs,
-  doc,
-  updateDoc,
   query,
   where,
 } from "firebase/firestore";
 
 export default function LeaderBoard() {
-  const [activeTab, setActiveTab] = useState("user"); // "user" or "team"
+  const [activeTab, setActiveTab] = useState("user"); // "user" | "team"
   const [users, setUsers] = useState([]);
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load both users leaderboard and teams (so switching tabs is instant)
-    async function loadAll() {
+    (async () => {
       setLoading(true);
       await Promise.all([loadUserLeaderboard(), loadTeamLeaderboard()]);
       setLoading(false);
-    }
-    loadAll();
+    })();
   }, []);
+
+  // ---------- helpers ----------
+  async function sumExercisesIncludingDays(userId) {
+    let total = 0;
+    try {
+      const exRef = collection(db, "users", userId, "exercises");
+      const exSnap = await getDocs(exRef);
+      for (const exDoc of exSnap.docs) {
+        const exData = exDoc.data();
+        if (typeof exData.points === "number") total += exData.points;
+
+        // also sum /days subcollection
+        try {
+          const daysRef = collection(
+            db,
+            "users",
+            userId,
+            "exercises",
+            exDoc.id,
+            "days"
+          );
+          const daysSnap = await getDocs(daysRef);
+          // eslint-disable-next-line no-loop-func
+          daysSnap.forEach((d) => (total += Number(d.data()?.points) || 0));
+        } catch {}
+      }
+    } catch {}
+    return total;
+  }
+
+  async function computePointsForUserDoc(userDoc) {
+    if (!userDoc) return 0;
+    const ud = userDoc.data();
+    if (typeof ud.finalScore === "number") return ud.finalScore;
+    return sumExercisesIncludingDays(userDoc.id);
+  }
+
+  async function findUserDocByNameOrEmail(username, email) {
+    // email first (more unique)
+    if (email) {
+      const q1 = query(collection(db, "users"), where("email", "==", email));
+      const s1 = await getDocs(q1);
+      if (!s1.empty) return s1.docs[0];
+    }
+    if (username) {
+      const q2 = query(collection(db, "users"), where("username", "==", username));
+      const s2 = await getDocs(q2);
+      if (!s2.empty) return s2.docs[0];
+    }
+    return null;
+  }
 
   // ---------- USERS ----------
   async function loadUserLeaderboard() {
@@ -36,212 +83,102 @@ export default function LeaderBoard() {
       const usersRef = collection(db, "users");
       const userSnaps = await getDocs(usersRef);
 
-      const leaderboardArray = [];
-
-      // iterate over users
+      const list = [];
       for (const u of userSnaps.docs) {
-        const userId = u.id;
-        const userData = u.data();
+        const uid = u.id;
+        const ud = u.data();
+        const points =
+          typeof ud.finalScore === "number"
+            ? ud.finalScore
+            : await sumExercisesIncludingDays(uid);
 
-        const exercisesRef = collection(db, "users", userId, "exercises");
-        const exSnap = await getDocs(exercisesRef);
-
-        let totalPoints = 0;
-        exSnap.forEach((docItem) => {
-          const data = docItem.data();
-          totalPoints += data.points || 0;
-        });
-
-        // Save final score in user's document (optional)
-        // Note: you may want to guard this to avoid too many writes; kept as in original
-        try {
-          await updateDoc(doc(db, "users", userId), { finalScore: totalPoints });
-        } catch (e) {
-          // ignore update errors (e.g. permissions) so UI still works
-          console.warn("Could not update finalScore for user:", userId, e);
-        }
-
-        leaderboardArray.push({
-          id: userId,
-          name: userData.username || "Unknown",
-          email: userData.email || null,
-          points: totalPoints,
+        list.push({
+          id: uid,
+          name: ud.username || ud.name || "(No name)",
+          email: ud.email || "",
+          points,
         });
       }
 
-      leaderboardArray.sort((a, b) => b.points - a.points);
-      setUsers(leaderboardArray);
+      list.sort((a, b) => b.points - a.points);
+      setUsers(list);
     } catch (err) {
       console.error("Failed to load user leaderboard:", err);
     }
   }
 
   // ---------- TEAMS ----------
-  // Helper: find a user doc by username OR email
-  async function findUserDocByNameOrEmail(name, email) {
-    // try username first
-    if (name) {
-      try {
-        const q = query(collection(db, "users"), where("username", "==", name));
-        const snap = await getDocs(q);
-        if (!snap.empty) return snap.docs[0]; // return first match
-      } catch (e) {
-        console.warn("username query failed", e);
-      }
-    }
-    // fallback to email
-    if (email) {
-      try {
-        const q2 = query(collection(db, "users"), where("email", "==", email));
-        const snap2 = await getDocs(q2);
-        if (!snap2.empty) return snap2.docs[0];
-      } catch (e) {
-        console.warn("email query failed", e);
-      }
-    }
-    return null;
-  }
-
-  // Helper: compute points for a user doc (use finalScore if present, otherwise sum exercises)
-  async function computePointsForUserDoc(userDoc) {
-    if (!userDoc) return 0;
-    const ud = userDoc.data();
-    if (typeof ud.finalScore === "number") return ud.finalScore;
-
-    // otherwise sum exercises
-    try {
-      const userId = userDoc.id;
-      const exercisesRef = collection(db, "users", userId, "exercises");
-      const exSnap = await getDocs(exercisesRef);
-      let total = 0;
-      exSnap.forEach((d) => {
-        const dd = d.data();
-        total += dd.points || 0;
-      });
-      // optionally update user's finalScore to cache
-      try {
-        await updateDoc(doc(db, "users", userId), { finalScore: total });
-      } catch (e) {
-        // ignore
-      }
-      return total;
-    } catch (e) {
-      console.warn("Failed to sum exercises for user", e);
-      return 0;
-    }
-  }
-
   async function loadTeamLeaderboard() {
     try {
       const teamsRef = collection(db, "teams");
       const teamSnaps = await getDocs(teamsRef);
 
-      const teamResults = [];
+      const results = [];
 
-      for (const teamDoc of teamSnaps.docs) {
-        const teamId = teamDoc.id;
-        const teamData = teamDoc.data();
+      for (const t of teamSnaps.docs) {
+        const teamId = t.id;
+        const td = t.data();
+        const teamName = td.teamName || td.name || teamId;
+        const description = td.description || "";
 
-        // We'll try to detect members in different possible structures:
-        // 1) team document has a field `members` as an array of { name, email } or strings
-        // 2) team has a subcollection "members" where each doc is a member doc with name/email
-        // 3) team doc contains fields like remi: "remi@gmail.com" (less likely)
-        let membersList = [];
+        // get members subcollection
+        let members = [];
+        try {
+          const membersRef = collection(db, "teams", teamId, "members");
+          const memSnap = await getDocs(membersRef);
+          members = memSnap.docs.map((md) => {
+            const d = md.data();
+            return {
+              username: d.username || d.name || md.id,
+              email: d.email || null,
+            };
+          });
+        } catch {}
 
-        // case 1: array field
-        if (Array.isArray(teamData.members) && teamData.members.length > 0) {
-          // normalize to objects { name, email }
-          membersList = teamData.members.map((m) =>
-            typeof m === "string" ? { name: m, email: null } : { name: m.name || m.username || null, email: m.email || null }
-          );
-        }
-
-        // case 2: check members subcollection if membersList empty
-        if (membersList.length === 0) {
-          try {
-            const membersRef = collection(db, "teams", teamId, "members");
-            const membersSnap = await getDocs(membersRef);
-            if (!membersSnap.empty) {
-              membersList = membersSnap.docs.map((md) => {
-                const mdData = md.data();
-                return {
-                  name: mdData.username || mdData.name || md.id,
-                  email: mdData.email || null,
-                };
-              });
-            }
-          } catch (e) {
-            // ignore
+        const resolved = [];
+        for (const m of members) {
+          const userDoc = await findUserDocByNameOrEmail(m.username, m.email);
+          if (userDoc) {
+            const pts = await computePointsForUserDoc(userDoc);
+            resolved.push({
+              name: userDoc.data().username || userDoc.data().name || m.username || "(unknown)",
+              email: userDoc.data().email || m.email || "",
+              points: pts,
+            });
+          } else {
+            resolved.push({
+              name: m.username || "(unknown)",
+              email: m.email || "",
+              points: 0,
+            });
           }
         }
 
-        // case 3: fallback — try to use any primitive keys in teamDoc (not recommended), convert to members
-        if (membersList.length === 0) {
-          // try to detect keys which look like member entries
-          const candidateMembers = [];
-          for (const [k, v] of Object.entries(teamData)) {
-            // skip metadata fields like description or teamName
-            if (k === "teamName" || k === "name" || k === "description" || k === "members") continue;
-            if (typeof v === "string" && v.includes("@")) {
-              candidateMembers.push({ name: k, email: v });
-            } else if (typeof v === "string") {
-              candidateMembers.push({ name: v, email: null });
-            }
-          }
-          membersList = candidateMembers;
-        }
+        // ✅ total + avg (contributors only)
+        const totalPoints = resolved.reduce((s, r) => s + (r.points || 0), 0);
+        const contributors = resolved.filter((m) => (m.points || 0) > 0).length;
+        const denom = contributors > 0 ? contributors : 1;
+        const avgPoints = Math.round((totalPoints / denom) * 100) / 100;
 
-        // Now compute points for each member
-        const memberPointsPromises = membersList.map(async (m) => {
-          // find the user's document in users collection by username or email
-          const possibleName = m.name || null;
-          const possibleEmail = m.email || null;
-
-          const userDoc = await findUserDocByNameOrEmail(possibleName, possibleEmail);
-          const points = await computePointsForUserDoc(userDoc);
-          // if we didn't find via queries, also try matching by doc id (maybe team stores userId)
-          if (!userDoc && possibleName) {
-            try {
-              const maybeDoc = await getDocs(query(collection(db, "users"), where("__name__", "==", possibleName)));
-              if (!maybeDoc.empty) {
-                const ud2 = maybeDoc.docs[0];
-                const pts2 = await computePointsForUserDoc(ud2);
-                return { name: possibleName, email: possibleEmail, points: pts2 };
-              }
-            } catch (e) {
-              // ignore
-            }
-          }
-
-          return { name: possibleName || "(unknown)", email: possibleEmail || null, points };
-        });
-
-        const resolvedMembers = await Promise.all(memberPointsPromises);
-
-        const totalPoints = resolvedMembers.reduce((s, r) => s + (r.points || 0), 0);
-        const memberCount = resolvedMembers.length || 1; // avoid divide by zero
-        const avgPoints = Math.round((totalPoints / memberCount) * 100) / 100; // two decimals
-
-        // <-- FIX: prefer teamData.teamName (your Firestore field), then fallback to teamData.name, then doc id
-        teamResults.push({
+        results.push({
           id: teamId,
-          name: teamData.teamName || teamData.name || teamId,
-          description: teamData.description || "",
-          members: resolvedMembers,
-          avgPoints,
+          name: teamName,
+          description,
+          members: resolved,
           totalPoints,
+          avgPoints,
         });
       }
 
-      // sort teams by avgPoints desc
-      teamResults.sort((a, b) => b.avgPoints - a.avgPoints);
-      setTeams(teamResults);
+      // sort by total desc
+      results.sort((a, b) => b.totalPoints - a.totalPoints);
+      setTeams(results);
     } catch (err) {
-      console.error("Failed to load teams leaderboard:", err);
+      console.error("Failed to load team leaderboard:", err);
     }
   }
 
-  // ----------------- render -----------------
+  // ---------- UI ----------
   return (
     <>
       <Headers />
@@ -260,7 +197,6 @@ export default function LeaderBoard() {
             >
               👤 User Rank
             </div>
-
             <div
               className={`tab ${activeTab === "team" ? "active" : ""}`}
               onClick={() => setActiveTab("team")}
@@ -272,6 +208,7 @@ export default function LeaderBoard() {
           <div className="table-scroll">
             {loading && <div style={{ color: "#ddd", padding: 12 }}>Loading...</div>}
 
+            {/* USER LEADERBOARD */}
             {activeTab === "user" && !loading && (
               <table className="leaderboard-table">
                 <thead>
@@ -280,10 +217,9 @@ export default function LeaderBoard() {
                     <th>Points</th>
                   </tr>
                 </thead>
-
                 <tbody>
-                  {users.map((u, i) => (
-                    <tr key={u.id || i}>
+                  {users.map((u) => (
+                    <tr key={u.id}>
                       <td>{u.name}</td>
                       <td>{u.points}</td>
                     </tr>
@@ -292,30 +228,48 @@ export default function LeaderBoard() {
               </table>
             )}
 
+            {/* TEAM LEADERBOARD */}
             {activeTab === "team" && !loading && (
               <>
                 <table className="leaderboard-table">
                   <thead>
                     <tr>
                       <th>Team</th>
-                      <th>Avg Points</th>
+                      <th>Total Points</th>
+                      <th>Avg Points (contributors)</th>
                       <th>Members</th>
                     </tr>
                   </thead>
-
                   <tbody>
                     {teams.map((t) => (
                       <tr key={t.id}>
                         <td style={{ verticalAlign: "top", fontWeight: 800 }}>
                           {t.name}
-                          {t.description ? (
-                            <div style={{ fontSize: 12, color: "#d0d0d0", fontWeight: 500 }}>{t.description}</div>
-                          ) : null}
+                          {t.description && (
+                            <div
+                              style={{
+                                fontSize: 12,
+                                color: "#d0d0d0",
+                                fontWeight: 500,
+                              }}
+                            >
+                              {t.description}
+                            </div>
+                          )}
                         </td>
+                        <td style={{ verticalAlign: "top" }}>{t.totalPoints}</td>
                         <td style={{ verticalAlign: "top" }}>{t.avgPoints}</td>
                         <td>
-                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                            {t.members.length === 0 && <div style={{ color: "#cfcfcf" }}>No members</div>}
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 6,
+                            }}
+                          >
+                            {t.members.length === 0 && (
+                              <div style={{ color: "#cfcfcf" }}>No members</div>
+                            )}
                             {t.members.map((m, idx) => (
                               <div
                                 key={idx}
@@ -329,9 +283,20 @@ export default function LeaderBoard() {
                               >
                                 <div>
                                   <div style={{ fontWeight: 700 }}>{m.name}</div>
-                                  {m.email ? <div style={{ fontSize: 12, color: "#bdbdbd" }}>{m.email}</div> : null}
+                                  {m.email && (
+                                    <div
+                                      style={{
+                                        fontSize: 12,
+                                        color: "#bdbdbd",
+                                      }}
+                                    >
+                                      {m.email}
+                                    </div>
+                                  )}
                                 </div>
-                                <div style={{ fontWeight: 800 }}>{m.points}</div>
+                                <div style={{ fontWeight: 800 }}>
+                                  {m.points}
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -341,13 +306,20 @@ export default function LeaderBoard() {
                   </tbody>
                 </table>
 
-                {teams.length === 0 && <div style={{ color: "#ddd", padding: 12 }}>No teams found</div>}
+                {teams.length === 0 && (
+                  <div style={{ color: "#ddd", padding: 12 }}>
+                    No teams found
+                  </div>
+                )}
               </>
             )}
           </div>
 
           <div className="panel-actions">
-            <button className="back-btn" onClick={() => (window.location.href = "/")}>
+            <button
+              className="back-btn"
+              onClick={() => (window.location.href = "/")}
+            >
               Back to Home
             </button>
           </div>

@@ -117,10 +117,10 @@ export default function Rules() {
     setTimeout(() => setMessage(""), 2500);
   };
 
-  // ===== Push-up (NEW) =====
-  const [puSeconds, setPuSeconds] = useState(""); // maps to "Seconds"
-  const [puMaxPoints, setPuMaxPoints] = useState(""); // maps to "maxPoints"
-  const [puPerDayMax, setPuPerDayMax] = useState(""); // maps to "maximumcount perday"
+  // ===== Push-up (existing) =====
+  const [puSeconds, setPuSeconds] = useState(""); // "Seconds"
+  const [puMaxPoints, setPuMaxPoints] = useState(""); // "maxPoints"
+  const [puPerDayMax, setPuPerDayMax] = useState(""); // "maximumcount perday"
   const [puSaving, setPuSaving] = useState(false);
   const [puMsg, setPuMsg] = useState("");
   const pushupRef = doc(db, "poseRules", "pushup");
@@ -131,11 +131,9 @@ export default function Rules() {
       (snap) => {
         if (snap.exists()) {
           const d = snap.data();
-          // EXACT keys as requested
           const s = d?.Seconds;
           const mp = d?.maxPoints;
           const perDay = d?.["maximumcount perday"];
-
           setPuSeconds(typeof s === "number" ? s : "");
           setPuMaxPoints(typeof mp === "number" ? mp : "");
           setPuPerDayMax(typeof perDay === "number" ? perDay : "");
@@ -160,7 +158,7 @@ export default function Rules() {
     })();
 
     return () => unsub && unsub();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const validatePushup = () => {
@@ -190,7 +188,6 @@ export default function Rules() {
     setPuSaving(true);
     try {
       const payload = {
-        // keep EXACT field names
         Seconds: Number(puSeconds),
         maxPoints: Number(puMaxPoints),
         ["maximumcount perday"]: Number(puPerDayMax),
@@ -215,11 +212,183 @@ export default function Rules() {
     setTimeout(() => setPuMsg(""), 2500);
   };
 
+  // ===== Bridge Pose (existing) =====
+  const bridgeRef = doc(db, "poseRules", "bridgepose");
+  const [bpSeconds, setBpSeconds] = useState("");
+  const [bpSaving, setBpSaving] = useState(false);
+  const [bpMsg, setBpMsg] = useState("");
+
+  useEffect(() => {
+    const unsub = onSnapshot(
+      bridgeRef,
+      (snap) => {
+        if (snap.exists()) {
+          const d = snap.data();
+          if (d?.holdMs != null) setBpSeconds(Number(d.holdMs) / 1000);
+          else if (d?.holdSeconds != null) setBpSeconds(Number(d.holdSeconds));
+          else setBpSeconds("");
+        } else {
+          setBpSeconds("");
+        }
+      },
+      (err) => {
+        console.error("Bridge rules onSnapshot:", err);
+        setBpMsg("Failed to subscribe to Bridge rules.");
+      }
+    );
+
+    (async () => {
+      try {
+        await getDoc(bridgeRef);
+      } catch (e) {
+        console.warn("Initial Bridge read failed:", e);
+      }
+    })();
+
+    return () => unsub && unsub();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const validateBridge = () => {
+    setBpMsg("");
+    const s = Number(bpSeconds);
+    if (bpSeconds === "" || isNaN(s) || s <= 0) {
+      setBpMsg("Enter a valid Bridge hold time (seconds > 0).");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSaveBridge = async (e) => {
+    e?.preventDefault?.();
+    if (!validateBridge()) return;
+    setBpMsg("");
+    setBpSaving(true);
+    try {
+      const sec = Number(bpSeconds);
+      const payload = {
+        holdSeconds: sec,
+        holdMs: Math.round(sec * 1000),
+        updatedAt: serverTimestamp(),
+      };
+      await setDoc(bridgeRef, payload, { merge: true });
+      setBpMsg("✅ Bridge rules saved.");
+    } catch (err) {
+      console.error("Save Bridge rules error:", err);
+      setBpMsg("❌ Failed to save Bridge rules. See console.");
+    } finally {
+      setBpSaving(false);
+      setTimeout(() => setBpMsg(""), 3000);
+    }
+  };
+
+  const handleResetDefaultsBridge = () => {
+    setBpSeconds(10);
+    setBpMsg("Defaults applied (not saved). Click Save to persist.");
+    setTimeout(() => setBpMsg(""), 2500);
+  };
+
+  // ===== Squat (NEW) =====
+  // Same schema as push-up: Seconds, maxPoints, "maximumcount perday", updatedAt
+  const squatRef = doc(db, "poseRules", "squat");
+  const [sqSeconds, setSqSeconds] = useState("");
+  const [sqMaxPoints, setSqMaxPoints] = useState("");
+  const [sqPerDayMax, setSqPerDayMax] = useState("");
+  const [sqSaving, setSqSaving] = useState(false);
+  const [sqMsg, setSqMsg] = useState("");
+
+  useEffect(() => {
+    const unsub = onSnapshot(
+      squatRef,
+      (snap) => {
+        if (snap.exists()) {
+          const d = snap.data();
+          const s = d?.Seconds;
+          const mp = d?.maxPoints;
+          const pd = d?.["maximumcount perday"];
+          setSqSeconds(typeof s === "number" ? s : "");
+          setSqMaxPoints(typeof mp === "number" ? mp : "");
+          setSqPerDayMax(typeof pd === "number" ? pd : "");
+        } else {
+          setSqSeconds("");
+          setSqMaxPoints("");
+          setSqPerDayMax("");
+        }
+      },
+      (err) => {
+        console.error("Squat rules onSnapshot:", err);
+        setSqMsg("Failed to subscribe to Squat rules.");
+      }
+    );
+
+    (async () => {
+      try {
+        await getDoc(squatRef);
+      } catch (e) {
+        console.warn("Initial Squat read failed:", e);
+      }
+    })();
+
+    return () => unsub && unsub();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const validateSquat = () => {
+    setSqMsg("");
+    const s = Number(sqSeconds);
+    const mp = Number(sqMaxPoints);
+    const pd = Number(sqPerDayMax);
+    if (sqSeconds === "" || isNaN(s) || s <= 0) {
+      setSqMsg("Enter a valid window Seconds (> 0).");
+      return false;
+    }
+    if (sqMaxPoints === "" || isNaN(mp) || mp <= 0) {
+      setSqMsg("Enter a valid maxPoints (> 0).");
+      return false;
+    }
+    if (sqPerDayMax === "" || isNaN(pd) || pd <= 0) {
+      setSqMsg('Enter a valid "maximumcount perday" (> 0).');
+      return false;
+    }
+    return true;
+  };
+
+  const handleSaveSquat = async (e) => {
+    e?.preventDefault?.();
+    if (!validateSquat()) return;
+    setSqMsg("");
+    setSqSaving(true);
+    try {
+      const payload = {
+        Seconds: Number(sqSeconds),
+        maxPoints: Number(sqMaxPoints),
+        ["maximumcount perday"]: Number(sqPerDayMax),
+        updatedAt: serverTimestamp(),
+      };
+      await setDoc(squatRef, payload, { merge: true });
+      setSqMsg("✅ Squat rules saved.");
+    } catch (err) {
+      console.error("Save squat rules error:", err);
+      setSqMsg("❌ Failed to save Squat rules. See console.");
+    } finally {
+      setSqSaving(false);
+      setTimeout(() => setSqMsg(""), 3000);
+    }
+  };
+
+  const handleResetDefaultsSquat = () => {
+    setSqSeconds(5);
+    setSqMaxPoints(20);
+    setSqPerDayMax(20);
+    setSqMsg("Defaults applied (not saved). Click Save to persist.");
+    setTimeout(() => setSqMsg(""), 2500);
+  };
+
   if (loading) return <div className="rules-wrap">Loading rules…</div>;
 
   return (
     <div className="rules-wrap">
-      {/* ===== BigToe section (existing) ===== */}
+      {/* ===== BigToe section ===== */}
       <h2 className="rules-title">Pose Rules — Big Toe (admin)</h2>
 
       <form className="rules-form" onSubmit={handleSaveBigToe}>
@@ -264,7 +433,41 @@ export default function Rules() {
         {message && <div className="rules-msg">{message}</div>}
       </form>
 
-      {/* ===== Push-up section (NEW) ===== */}
+      {/* ===== Bridge Pose section ===== */}
+      <h2 className="rules-title" style={{ marginTop: 28 }}>
+        Pose Rules — Bridge (admin)
+      </h2>
+
+      <form className="rules-form" onSubmit={handleSaveBridge}>
+        <label className="rules-label">
+          Hold time (seconds)
+          <input
+            className="rules-input"
+            type="number"
+            value={bpSeconds}
+            onChange={(e) => setBpSeconds(e.target.value)}
+            min="0.1"
+            step="0.1"
+          />
+        </label>
+
+        <div className="rules-actions">
+          <button className="rules-save" type="submit" disabled={bpSaving}>
+            {bpSaving ? "Saving…" : "Save rules"}
+          </button>
+          <button
+            type="button"
+            className="rules-default"
+            onClick={handleResetDefaultsBridge}
+          >
+            Reset defaults
+          </button>
+        </div>
+
+        {bpMsg && <div className="rules-msg">{bpMsg}</div>}
+      </form>
+
+      {/* ===== Push-up section ===== */}
       <h2 className="rules-title" style={{ marginTop: 28 }}>
         Pose Rules — Push-Up (admin)
       </h2>
@@ -320,6 +523,64 @@ export default function Rules() {
         </div>
 
         {puMsg && <div className="rules-msg">{puMsg}</div>}
+      </form>
+
+      {/* ===== Squat section (NEW) ===== */}
+      <h2 className="rules-title" style={{ marginTop: 28 }}>
+        Pose Rules — Squat (admin)
+      </h2>
+
+      <form className="rules-form" onSubmit={handleSaveSquat}>
+        <label className="rules-label">
+          Seconds (timer window)
+          <input
+            className="rules-input"
+            type="number"
+            value={sqSeconds}
+            onChange={(e) => setSqSeconds(e.target.value)}
+            min="1"
+            step="1"
+          />
+        </label>
+
+        <label className="rules-label">
+          maxPoints (per-session cap)
+          <input
+            className="rules-input"
+            type="number"
+            value={sqMaxPoints}
+            onChange={(e) => setSqMaxPoints(e.target.value)}
+            min="1"
+            step="1"
+          />
+        </label>
+
+        <label className="rules-label">
+          maximumcount perday (daily cap)
+          <input
+            className="rules-input"
+            type="number"
+            value={sqPerDayMax}
+            onChange={(e) => setSqPerDayMax(e.target.value)}
+            min="1"
+            step="1"
+          />
+        </label>
+
+        <div className="rules-actions">
+          <button className="rules-save" type="submit" disabled={sqSaving}>
+            {sqSaving ? "Saving…" : "Save rules"}
+          </button>
+          <button
+            type="button"
+            className="rules-default"
+            onClick={handleResetDefaultsSquat}
+          >
+            Reset defaults
+          </button>
+        </div>
+
+        {sqMsg && <div className="rules-msg">{sqMsg}</div>}
       </form>
     </div>
   );
