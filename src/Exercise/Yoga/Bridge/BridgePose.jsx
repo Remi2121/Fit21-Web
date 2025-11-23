@@ -10,12 +10,13 @@ import {
 } from "@mediapipe/tasks-vision";
 
 import { db } from "../../../firebase";
-import { doc, onSnapshot, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, onSnapshot, getDoc, setDoc, serverTimestamp,increment } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-
+import Chair from "../Chair/Chairpose";
 
 // set true only to see debug numbers (unmirrored)
 const SHOW_HUD = false;
+
 
 // ---- tunables (easy to tweak later) ----
 const HIP_GAP_MIN = 0.020;      
@@ -28,6 +29,10 @@ const HEAD_VIS_MIN = 0.50;
 const HEAD_FLOOR_MARGIN = -0.50;
 
 export default function BridgePose({ holdMs = 10000, badResetMs = 3000 }) {
+  const [nextYoga, setNextYoga] = useState(false);
+  const stripRef = useRef(null);
+  const bridgeRef = useRef(null);
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const landmarkerRef = useRef(null);
@@ -131,38 +136,65 @@ export default function BridgePose({ holdMs = 10000, badResetMs = 3000 }) {
     })();
   }, []);
 
-    // Save once per day
-  const saveBridgeForToday = async () => {
-    if (savingRef.current) return;
-    try {
-      const auth = getAuth();
-      const uid = auth.currentUser?.uid;
-      if (!uid) {
-        alert("Please sign in first.");
-        return;
-      }
-      const dayId = todayStrLocal();
-      const ref = doc(db, "users", uid, "exercises", "bridge", "days", dayId);
-      const existing = await getDoc(ref);
-      if (existing.exists()) {
-        setAlreadyDone(true);
-        setAlreadyPopup(true);
-        return;
-      }
-      savingRef.current = true;
-      await setDoc(ref, {
-        date: dayId,
-        points: 5,
-        savedAt: serverTimestamp(),
-      });
-      setAlreadyDone(true);
-    } catch (e) {
-      console.error("saveBridgeForToday error:", e);
-    } finally {
-      savingRef.current = false;
-    }
-  };
+  const POINTS_BRIDGE = 5;
 
+const saveBridgeForToday = async () => {
+  if (savingRef.current) return;
+  try {
+    const auth = getAuth();
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+      alert("Please sign in first.");
+      return;
+    }
+
+    const dayId = todayStrLocal();
+    const dayRef = doc(db, "users", uid, "exercises", "bridge", "days", dayId);
+
+    // idempotent: don't double-count on the same day
+    const existing = await getDoc(dayRef);
+    if (existing.exists()) {
+      setAlreadyDone(true);
+      setAlreadyPopup(true);
+      return;
+    }
+
+    savingRef.current = true;
+
+    // 1) Save today’s bridge result
+    await setDoc(dayRef, {
+      date: dayId,
+      points: POINTS_BRIDGE,        // was 5
+      savedAt: serverTimestamp(),
+    });
+
+    // 2) Atomically add to users/{uid}.finalScore (create if missing)
+    const userRef = doc(db, "users", uid);
+    await setDoc(
+      userRef,
+      {
+        finalScore: increment(POINTS_BRIDGE),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    setAlreadyDone(true);
+  } catch (e) {
+    console.error("saveBridgeForToday error:", e);
+  } finally {
+    savingRef.current = false;
+  }
+};
+
+  useEffect(() => {
+  if (nextYoga) {
+    // small delay so Bridge slide mounts, then scroll
+    requestAnimationFrame(() => {
+      bridgeRef.current?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+    });
+  }
+}, [nextYoga]);
   // camera + loop
   useEffect(() => {
     let rafId;
@@ -371,6 +403,9 @@ export default function BridgePose({ holdMs = 10000, badResetMs = 3000 }) {
     : "0.0";
 
   return (
+    <div className="yoga-strip" ref={stripRef}>
+    {/* Slide 1: Bridge Toe */}
+    <section className="yoga-slide">
     <div className="bp-container">
       <h2 className="stoke-text boe">Bridge Pose – Setu Bandha Sarvangasana</h2>
 
@@ -410,22 +445,34 @@ export default function BridgePose({ holdMs = 10000, badResetMs = 3000 }) {
         Rules: hip above shoulder, knee between {KNEE_MIN}–{KNEE_MAX}°, shin near vertical, near foot touching floor, and head visible & on the floor. (Small flickers won’t reset the timer.)
       </p>
 
-      {showDone && (
+      {showDone && !nextYoga &&(
         <div className="bp-done">
           <div className="bp-done-card">
             <h3>Excellent! ✅</h3>
             <p>You held the bridge pose for {(holdMsState / 1000) | 0} seconds.</p>
-            <div className="bp-done-actions">
-              <button className="resetbutton" onClick={async () => { await saveBridgeForToday(); }}>
-                Save Today
+            
+            <button
+                className="resetbutton"
+                onClick={async () => {
+                    await saveBridgeForToday(); // store to Firestore (only once per day)
+                    setShowDone(false);
+                    setNextYoga(true); // move to next Yoga
+                  }}
+              >
+                Do next Yoga
               </button>
-              <button className="resetbutton" onClick={() => window.location.reload()}>
-                Restart Camera
-              </button>
-            </div>
           </div>
         </div>
       )}
+      </div>
+    </section>
+
+    {/* Slide 2: Bridge */}
+        {nextYoga && (
+          <section className="yoga-slide" ref={bridgeRef}>
+            <Chair />
+          </section>
+        )}
 
       {/* already-finished popup */}
       {alreadyPopup && (

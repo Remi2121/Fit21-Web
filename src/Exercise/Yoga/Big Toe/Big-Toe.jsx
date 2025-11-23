@@ -17,6 +17,7 @@ import {
   getDoc,
   setDoc,
   serverTimestamp,
+   increment,
 } from "firebase/firestore";
 
 import { getAuth } from "firebase/auth";
@@ -433,40 +434,59 @@ export default function BigToe({ holdMs = 10000, badResetMs = 3000 }) {
     ? Math.max(0, (performance.now() - greenSinceRef.current) / 1000).toFixed(1)
     : "0.0";
 
-  // === Save today result (idempotent per day) ===
-  const saveBigToeForToday = async () => {
-    if (savingRef.current) return;
-    try {
-      const auth = getAuth();
-      const uid = auth.currentUser?.uid;
-      if (!uid) {
-        alert("Please sign in first.");
-        return;
-      }
 
-      const dayId = todayStrLocal();
-      const ref = doc(db, "users", uid, "exercises", "bigtoe", "days", dayId);
+  const POINTS_BIGTOE = 5;
 
-      const existing = await getDoc(ref);
-      if (existing.exists()) {
-        setAlreadyDone(true);
-        setAlreadyPopup(true);
-        return;
-      }
-
-      savingRef.current = true;
-      await setDoc(ref, {
-        date: dayId,
-        points: 5,
-        savedAt: serverTimestamp(),
-      });
-      setAlreadyDone(true);
-    } catch (e) {
-      console.error("saveBigToeForToday error:", e);
-    } finally {
-      savingRef.current = false;
+// === Save today result (idempotent per day) ===
+const saveBigToeForToday = async () => {
+  if (savingRef.current) return;
+  try {
+    const auth = getAuth();
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+      alert("Please sign in first.");
+      return;
     }
-  };
+
+    const dayId = todayStrLocal();
+
+    // 1) Per-day record (idempotent)
+    const dayRef = doc(db, "users", uid, "exercises", "bigtoe", "days", dayId);
+    const existing = await getDoc(dayRef);
+    if (existing.exists()) {
+      setAlreadyDone(true);
+      setAlreadyPopup(true);
+      return;
+    }
+
+    savingRef.current = true;
+
+    // Write the day document
+    await setDoc(dayRef, {
+      date: dayId,
+      points: POINTS_BIGTOE, // was 5
+      savedAt: serverTimestamp(),
+    });
+
+    // 2) Bump user's finalScore atomically and update updatedAt
+    const userRef = doc(db, "users", uid);
+    await setDoc(
+      userRef,
+      {
+        finalScore: increment(POINTS_BIGTOE),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true } // creates the field/doc if missing
+    );
+
+    setAlreadyDone(true);
+  } catch (e) {
+    console.error("saveBigToeForToday error:", e);
+  } finally {
+    savingRef.current = false;
+  }
+};
+
 
   return (
       <div className="yoga-strip" ref={stripRef}>
