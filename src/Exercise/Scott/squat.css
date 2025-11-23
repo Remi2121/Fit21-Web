@@ -82,3 +82,83 @@
 .squat-reset-btn:hover {
   background-color: #666;
 }
+
+
+/* === Admin Timer Box === */
+.timer-box {
+  width: min(600px, 50vw);
+  height: 8rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  border-radius: 14px;
+  background: rgba(20, 20, 20, 0.7);          /* darker translucent base */
+  backdrop-filter: blur(10px);                /* soft glass blur */
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45); /* soft depth shadow */
+  color: #fff;
+  transition: 0.3s ease;
+}
+
+.timer-box:hover {
+  background: rgba(30, 30, 30, 0.82);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.55);
+}
+
+.timer-box-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.timer-box-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  opacity: 0.9;
+}
+
+.timer-box-chip {
+  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.1);
+  font-weight: 500;
+}
+
+.timer-box-value {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  margin: 8px 0;
+}
+.timer-box-value span {
+  font-size: 16px;
+  margin-left: 4px;
+  opacity: 0.85;
+}
+
+.timer-box-bar {
+  height: 2px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.timer-box-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff7a4d, #ff3e7f);
+  transition: width 100ms linear;
+}
+
+.timer-box-hint {
+  margin-top: 10px;
+  font-size: 13px;
+  opacity: 0.75;
+  text-align: center;
+}

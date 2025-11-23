@@ -5,243 +5,95 @@ import Headers from "../components/header/header.jsx";
 import "./Leaderboard.css";
 
 import { db } from "../firebase";
-import {
-  collection,
-  getDocs,
-  doc,
-  updateDoc,
-  query,
-  where,
-} from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 
 export default function LeaderBoard() {
-  const [activeTab, setActiveTab] = useState("user"); // "user" or "team"
-  const [users, setUsers] = useState([]);
-  const [teams, setTeams] = useState([]);
+  const [activeTab, setActiveTab] = useState("user"); // "user" | "team"
+  const [userRank, setUserRank] = useState([]);       // [{id, name, email, points}]
+  const [teamFinal, setTeamFinal] = useState([]);     // [{id, name, description, finalScore, hasTeamPhysical}]
+  const [individualCombined, setIndividualCombined] = useState([]); // [{id,name,email,online,physical,combined,hasPhysical}]
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load both users leaderboard and teams (so switching tabs is instant)
-    async function loadAll() {
+    (async () => {
       setLoading(true);
-      await Promise.all([loadUserLeaderboard(), loadTeamLeaderboard()]);
+
+      // ---- Load USERS (online + physical flags) ----
+      const usersSnap = await getDocs(collection(db, "users"));
+      const users = usersSnap.docs.map((d) => {
+        const raw = d.data() || {};
+        const online = Number(raw.finalScore) || 0;
+        // detect if field exists (not just 0)
+        const hasPhysical = Object.prototype.hasOwnProperty.call(raw, "finalScore_admin");
+        const physical = Number(raw.finalScore_admin) || 0;
+
+        return {
+          id: d.id,
+          name: raw.username || raw.name || "(No name)",
+          email: raw.email || "",
+          online,
+          physical,
+          combined: online + physical,
+          hasPhysical, // true if field present
+        };
+      });
+
+      // USER RANK (ONLINE ONLY)
+      const userRankSorted = [...users]
+        .sort((a, b) => b.online - a.online)
+        .map((u) => ({ id: u.id, name: u.name, email: u.email, points: u.online }));
+      setUserRank(userRankSorted);
+
+      // INDIVIDUAL (COMBINED)
+      const indivSorted = [...users]
+        .sort((a, b) => b.combined - a.combined)
+        .map((u) => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          online: u.online,
+          physical: u.physical,
+          combined: u.combined,
+          hasPhysical: u.hasPhysical,
+        }));
+      setIndividualCombined(indivSorted);
+
+      // ---- Load TEAMS (final only + flag) ----
+      const teamsSnap = await getDocs(collection(db, "teams"));
+      const teams = teamsSnap.docs.map((t) => {
+        const td = t.data() || {};
+        // detect existence of finalScore field
+        const hasTeamPhysical = Object.prototype.hasOwnProperty.call(td, "finalScore");
+        return {
+          id: t.id,
+          name: td.teamName || td.name || t.id,
+          description: td.description || "",
+          finalScore: Number(td.finalScore) || 0, // ADMIN SET
+          hasTeamPhysical,
+        };
+      });
+      const teamsSorted = teams.sort((a, b) => b.finalScore - a.finalScore);
+      setTeamFinal(teamsSorted);
+
       setLoading(false);
-    }
-    loadAll();
+    })();
   }, []);
 
-  // ---------- USERS ----------
-  async function loadUserLeaderboard() {
-    try {
-      const usersRef = collection(db, "users");
-      const userSnaps = await getDocs(usersRef);
+  // Small helper to render a status chip
+  const StatusChip = ({ ok, textIfOk, pendingText = "Waiting (admin will add)" }) => {
+    const base = {
+      display: "inline-block",
+      padding: "2px 8px",
+      borderRadius: 999,
+      fontSize: 12,
+      fontWeight: 700,
+      whiteSpace: "nowrap",
+    };
+    const styleOk = { ...base, background: "rgba(0,255,0,0.12)" };
+    const stylePend = { ...base, background: "rgba(255,165,0,0.16)" };
+    return <span style={ok ? styleOk : stylePend}>{ok ? textIfOk : pendingText}</span>;
+  };
 
-      const leaderboardArray = [];
-
-      // iterate over users
-      for (const u of userSnaps.docs) {
-        const userId = u.id;
-        const userData = u.data();
-
-        const exercisesRef = collection(db, "users", userId, "exercises");
-        const exSnap = await getDocs(exercisesRef);
-
-        let totalPoints = 0;
-        exSnap.forEach((docItem) => {
-          const data = docItem.data();
-          totalPoints += data.points || 0;
-        });
-
-        // Save final score in user's document (optional)
-        // Note: you may want to guard this to avoid too many writes; kept as in original
-        try {
-          await updateDoc(doc(db, "users", userId), { finalScore: totalPoints });
-        } catch (e) {
-          // ignore update errors (e.g. permissions) so UI still works
-          console.warn("Could not update finalScore for user:", userId, e);
-        }
-
-        leaderboardArray.push({
-          id: userId,
-          name: userData.username || "Unknown",
-          email: userData.email || null,
-          points: totalPoints,
-        });
-      }
-
-      leaderboardArray.sort((a, b) => b.points - a.points);
-      setUsers(leaderboardArray);
-    } catch (err) {
-      console.error("Failed to load user leaderboard:", err);
-    }
-  }
-
-  // ---------- TEAMS ----------
-  // Helper: find a user doc by username OR email
-  async function findUserDocByNameOrEmail(name, email) {
-    // try username first
-    if (name) {
-      try {
-        const q = query(collection(db, "users"), where("username", "==", name));
-        const snap = await getDocs(q);
-        if (!snap.empty) return snap.docs[0]; // return first match
-      } catch (e) {
-        console.warn("username query failed", e);
-      }
-    }
-    // fallback to email
-    if (email) {
-      try {
-        const q2 = query(collection(db, "users"), where("email", "==", email));
-        const snap2 = await getDocs(q2);
-        if (!snap2.empty) return snap2.docs[0];
-      } catch (e) {
-        console.warn("email query failed", e);
-      }
-    }
-    return null;
-  }
-
-  // Helper: compute points for a user doc (use finalScore if present, otherwise sum exercises)
-  async function computePointsForUserDoc(userDoc) {
-    if (!userDoc) return 0;
-    const ud = userDoc.data();
-    if (typeof ud.finalScore === "number") return ud.finalScore;
-
-    // otherwise sum exercises
-    try {
-      const userId = userDoc.id;
-      const exercisesRef = collection(db, "users", userId, "exercises");
-      const exSnap = await getDocs(exercisesRef);
-      let total = 0;
-      exSnap.forEach((d) => {
-        const dd = d.data();
-        total += dd.points || 0;
-      });
-      // optionally update user's finalScore to cache
-      try {
-        await updateDoc(doc(db, "users", userId), { finalScore: total });
-      } catch (e) {
-        // ignore
-      }
-      return total;
-    } catch (e) {
-      console.warn("Failed to sum exercises for user", e);
-      return 0;
-    }
-  }
-
-  async function loadTeamLeaderboard() {
-    try {
-      const teamsRef = collection(db, "teams");
-      const teamSnaps = await getDocs(teamsRef);
-
-      const teamResults = [];
-
-      for (const teamDoc of teamSnaps.docs) {
-        const teamId = teamDoc.id;
-        const teamData = teamDoc.data();
-
-        // We'll try to detect members in different possible structures:
-        // 1) team document has a field `members` as an array of { name, email } or strings
-        // 2) team has a subcollection "members" where each doc is a member doc with name/email
-        // 3) team doc contains fields like remi: "remi@gmail.com" (less likely)
-        let membersList = [];
-
-        // case 1: array field
-        if (Array.isArray(teamData.members) && teamData.members.length > 0) {
-          // normalize to objects { name, email }
-          membersList = teamData.members.map((m) =>
-            typeof m === "string" ? { name: m, email: null } : { name: m.name || m.username || null, email: m.email || null }
-          );
-        }
-
-        // case 2: check members subcollection if membersList empty
-        if (membersList.length === 0) {
-          try {
-            const membersRef = collection(db, "teams", teamId, "members");
-            const membersSnap = await getDocs(membersRef);
-            if (!membersSnap.empty) {
-              membersList = membersSnap.docs.map((md) => {
-                const mdData = md.data();
-                return {
-                  name: mdData.username || mdData.name || md.id,
-                  email: mdData.email || null,
-                };
-              });
-            }
-          } catch (e) {
-            // ignore
-          }
-        }
-
-        // case 3: fallback — try to use any primitive keys in teamDoc (not recommended), convert to members
-        if (membersList.length === 0) {
-          // try to detect keys which look like member entries
-          const candidateMembers = [];
-          for (const [k, v] of Object.entries(teamData)) {
-            // skip metadata fields like description or teamName
-            if (k === "teamName" || k === "name" || k === "description" || k === "members") continue;
-            if (typeof v === "string" && v.includes("@")) {
-              candidateMembers.push({ name: k, email: v });
-            } else if (typeof v === "string") {
-              candidateMembers.push({ name: v, email: null });
-            }
-          }
-          membersList = candidateMembers;
-        }
-
-        // Now compute points for each member
-        const memberPointsPromises = membersList.map(async (m) => {
-          // find the user's document in users collection by username or email
-          const possibleName = m.name || null;
-          const possibleEmail = m.email || null;
-
-          const userDoc = await findUserDocByNameOrEmail(possibleName, possibleEmail);
-          const points = await computePointsForUserDoc(userDoc);
-          // if we didn't find via queries, also try matching by doc id (maybe team stores userId)
-          if (!userDoc && possibleName) {
-            try {
-              const maybeDoc = await getDocs(query(collection(db, "users"), where("__name__", "==", possibleName)));
-              if (!maybeDoc.empty) {
-                const ud2 = maybeDoc.docs[0];
-                const pts2 = await computePointsForUserDoc(ud2);
-                return { name: possibleName, email: possibleEmail, points: pts2 };
-              }
-            } catch (e) {
-              // ignore
-            }
-          }
-
-          return { name: possibleName || "(unknown)", email: possibleEmail || null, points };
-        });
-
-        const resolvedMembers = await Promise.all(memberPointsPromises);
-
-        const totalPoints = resolvedMembers.reduce((s, r) => s + (r.points || 0), 0);
-        const memberCount = resolvedMembers.length || 1; // avoid divide by zero
-        const avgPoints = Math.round((totalPoints / memberCount) * 100) / 100; // two decimals
-
-        // <-- FIX: prefer teamData.teamName (your Firestore field), then fallback to teamData.name, then doc id
-        teamResults.push({
-          id: teamId,
-          name: teamData.teamName || teamData.name || teamId,
-          description: teamData.description || "",
-          members: resolvedMembers,
-          avgPoints,
-          totalPoints,
-        });
-      }
-
-      // sort teams by avgPoints desc
-      teamResults.sort((a, b) => b.avgPoints - a.avgPoints);
-      setTeams(teamResults);
-    } catch (err) {
-      console.error("Failed to load teams leaderboard:", err);
-    }
-  }
-
-  // ----------------- render -----------------
   return (
     <>
       <Headers />
@@ -260,7 +112,6 @@ export default function LeaderBoard() {
             >
               👤 User Rank
             </div>
-
             <div
               className={`tab ${activeTab === "team" ? "active" : ""}`}
               onClick={() => setActiveTab("team")}
@@ -272,19 +123,21 @@ export default function LeaderBoard() {
           <div className="table-scroll">
             {loading && <div style={{ color: "#ddd", padding: 12 }}>Loading...</div>}
 
+            {/* ================= USER RANK (ONLINE ONLY) ================= */}
             {activeTab === "user" && !loading && (
               <table className="leaderboard-table">
                 <thead>
                   <tr>
                     <th>User</th>
+                    <th>Email</th>
                     <th>Points</th>
                   </tr>
                 </thead>
-
                 <tbody>
-                  {users.map((u, i) => (
-                    <tr key={u.id || i}>
+                  {userRank.map((u) => (
+                    <tr key={u.id}>
                       <td>{u.name}</td>
+                      <td>{u.email || "-"}</td>
                       <td>{u.points}</td>
                     </tr>
                   ))}
@@ -292,62 +145,106 @@ export default function LeaderBoard() {
               </table>
             )}
 
+            {/* ================= TEAM RANK (FINAL) + INDIVIDUAL (COMBINED) ================= */}
             {activeTab === "team" && !loading && (
               <>
-                <table className="leaderboard-table">
+                {/* Teams — Final (admin set) */}
+                <h3 style={{ margin: "8px 0 10px" }}>Teams — Final (Admin set)</h3>
+                <table className="leaderboard-table" style={{ marginBottom: 22 }}>
                   <thead>
                     <tr>
                       <th>Team</th>
-                      <th>Avg Points</th>
-                      <th>Members</th>
+                      <th>Final Score</th>
+                      <th>Physical Status</th>
                     </tr>
                   </thead>
-
                   <tbody>
-                    {teams.map((t) => (
+                    {teamFinal.map((t) => (
                       <tr key={t.id}>
                         <td style={{ verticalAlign: "top", fontWeight: 800 }}>
                           {t.name}
-                          {t.description ? (
-                            <div style={{ fontSize: 12, color: "#d0d0d0", fontWeight: 500 }}>{t.description}</div>
-                          ) : null}
+                          {t.description && (
+                            <div
+                              style={{
+                                fontSize: 12,
+                                color: "#d0d0d0",
+                                fontWeight: 500,
+                              }}
+                            >
+                              {t.description}
+                            </div>
+                          )}
                         </td>
-                        <td style={{ verticalAlign: "top" }}>{t.avgPoints}</td>
-                        <td>
-                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                            {t.members.length === 0 && <div style={{ color: "#cfcfcf" }}>No members</div>}
-                            {t.members.map((m, idx) => (
-                              <div
-                                key={idx}
-                                style={{
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                  padding: "6px 10px",
-                                  background: "rgba(255,255,255,0.03)",
-                                  borderRadius: 8,
-                                }}
-                              >
-                                <div>
-                                  <div style={{ fontWeight: 700 }}>{m.name}</div>
-                                  {m.email ? <div style={{ fontSize: 12, color: "#bdbdbd" }}>{m.email}</div> : null}
-                                </div>
-                                <div style={{ fontWeight: 800 }}>{m.points}</div>
-                              </div>
-                            ))}
-                          </div>
+                        <td style={{ verticalAlign: "top" }}>{t.finalScore}</td>
+                        <td style={{ verticalAlign: "top" }}>
+                          <StatusChip
+                            ok={t.hasTeamPhysical && t.finalScore > 0}
+                            textIfOk="Set"
+                            pendingText="Waiting (admin will add)"
+                          />
                         </td>
                       </tr>
                     ))}
+                    {teamFinal.length === 0 && (
+                      <tr>
+                        <td colSpan={3} style={{ color: "#ddd", padding: 12 }}>
+                          No teams found
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
 
-                {teams.length === 0 && <div style={{ color: "#ddd", padding: 12 }}>No teams found</div>}
+                {/* Individuals — Combined (online + physical) */}
+                <h3 style={{ margin: "8px 0 10px" }}>
+                  Individual (Combined): finalScore + finalScore_admin
+                </h3>
+                <table className="leaderboard-table">
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>Email</th>
+                      <th>Online</th>
+                      <th>Physical (admin)</th>
+                      <th>Final Score</th>
+                      <th>Physical Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {individualCombined.map((u) => (
+                      <tr key={u.id}>
+                        <td>{u.name}</td>
+                        <td>{u.email || "-"}</td>
+                        <td>{u.online}</td>
+                        <td>{u.physical}</td>
+                        <td>{u.combined}</td>
+                        <td>
+                          <StatusChip
+                            ok={u.hasPhysical && u.physical > 0}
+                            textIfOk="Set"
+                            pendingText="Waiting (admin will add)"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                    {individualCombined.length === 0 && (
+                      <tr>
+                        <td colSpan={6} style={{ color: "#ddd", padding: 12 }}>
+                          No users found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </>
             )}
           </div>
 
           <div className="panel-actions">
-            <button className="back-btn" onClick={() => (window.location.href = "/")}>
+            <button
+              className="back-btn"
+              onClick={() => (window.location.href = "/")}
+            >
               Back to Home
             </button>
           </div>

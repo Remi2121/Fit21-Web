@@ -9,16 +9,31 @@ import {
   DrawingUtils,
 } from "@mediapipe/tasks-vision";
 
-// Firestore imports (assumes you export `db` from ../../../firebase)
+// FIRESTORE imports
 import { db } from "../../../firebase";
-import { doc, onSnapshot } from "firebase/firestore";
+import {
+  doc,
+  onSnapshot,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+   increment,
+} from "firebase/firestore";
+
+import { getAuth } from "firebase/auth";
+
+import BridgePose from "../Bridge/BridgePose";
 
 /* Landmark IDs:
    Left: 11 Sh, 23 Hip, 25 Knee, 27 Ankle, 15 Wrist, 31 BigToe
    Right:12 Sh, 24 Hip, 26 Knee, 28 Ankle, 16 Wrist, 32 BigToe
 */
 
-export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
+export default function BigToe({ holdMs = 10000, badResetMs = 3000 }) {
+  const [nextYoga, setNextYoga] = useState(false);
+  const stripRef = useRef(null);
+  const bridgeRef = useRef(null);
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const landmarkerRef = useRef(null);
@@ -27,19 +42,10 @@ export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
   const [allGoodState, setAllGoodState] = useState(false);
   const [sideUsed, setSideUsed] = useState("—");
 
-  // config loaded from Firestore (defaults provided)
-  const [config, setConfig] = useState({
-    hipAngleLimit: 80,   // default fallback
-    holdMs: holdMs,      // default fallback uses prop
-  });
-  // mirror in a ref so process() always reads the latest without re-creating effect
-  const configRef = useRef(config);
-  useEffect(() => { configRef.current = config }, [config]);
-
   // popup + stopping
   const [showDone, setShowDone] = useState(false);
   const greenSinceRef = useRef(null);
-  const badSinceRef = useRef(null); // track how long it’s bad
+  const badSinceRef = useRef(null);
   const stoppedRef = useRef(false);
 
   // progress UI
@@ -53,9 +59,57 @@ export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
   const passBuf = useRef(Array(8).fill(false));
   const passIdx = useRef(0);
 
+  // --- Firestore-configurable parameters ---
+  const [hipAngleLimitState, setHipAngleLimitState] = useState(80); // degrees
+  const [holdMsState, setHoldMsState] = useState(holdMs); // milliseconds
+
+  // refs so the running detector loop can read values without restarting
+  const hipRef = useRef(hipAngleLimitState);
+  const holdRef = useRef(holdMsState);
+
+  // Keep most-recent config timestamp so stale docs don't override newer settings
+  const lastConfigTsRef = useRef(0);
+
+   // === One-save-per-day state ===
+  const savingRef = useRef(false);
+  // eslint-disable-next-line no-unused-vars
+  const [alreadyDone, setAlreadyDone] = useState(false);
+  const [alreadyPopup, setAlreadyPopup] = useState(false);
+
+  const todayStrLocal = () => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+   // Check on mount: did user already finish today?
+  useEffect(() => {
+    (async () => {
+      try {
+        const auth = getAuth();
+        const uid = auth.currentUser?.uid;
+        if (!uid) return;
+        const dayId = todayStrLocal();
+        const ref = doc(db, "users", uid, "exercises", "bigtoe", "days", dayId);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          setAlreadyDone(true);
+        }
+      } catch (e) {
+        console.error("check already done failed:", e);
+      }
+    })();
+  }, []);
+
+
+  // --- utility helpers ---
   const angleDeg = (a, b, c) => {
-    const abx = a.x - b.x, aby = a.y - b.y;
-    const cbx = c.x - b.x, cby = c.y - b.y;
+    const abx = a.x - b.x,
+      aby = a.y - b.y;
+    const cbx = c.x - b.x,
+      cby = c.y - b.y;
     const dot = abx * cbx + aby * cby;
     const mag1 = Math.hypot(abx, aby);
     const mag2 = Math.hypot(cbx, cby);
@@ -67,54 +121,105 @@ export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
     Math.hypot((p.x - q.x) * W, (p.y - q.y) * H);
 
   const chooseSide = (lm, W, H) => {
-    const vis = i => (lm[i]?.visibility ?? 1);
-    const vsL = vis(11)+vis(23)+vis(25)+vis(27)+vis(15)+vis(31);
-    const vsR = vis(12)+vis(24)+vis(26)+vis(28)+vis(16)+vis(32);
+    const vis = (i) => lm[i]?.visibility ?? 1;
+    const vsL = vis(11) + vis(23) + vis(25) + vis(27) + vis(15) + vis(31);
+    const vsR = vis(12) + vis(24) + vis(26) + vis(28) + vis(16) + vis(32);
     const dL = distPx(lm[15], lm[31], W, H);
     const dR = distPx(lm[16], lm[32], W, H);
 
     if (Math.abs(vsL - vsR) < 0.5) return dL <= dR ? "left" : "right";
     return vsL > vsR ? "left" : "right";
   };
-
-  // -------------------------------
-  // Firestore subscription: load hipAngleLimit and holdMs (live)
-  // path: /poseRules/bigtoe  fields: hipAngleLimit, holdMs
-  // -------------------------------
+  
   useEffect(() => {
-    const ref = doc(db, "poseRules", "bigtoe");
+  if (nextYoga) {
+    // small delay so Bridge slide mounts, then scroll
+    requestAnimationFrame(() => {
+      bridgeRef.current?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+    });
+  }
+}, [nextYoga]);
+
+  // --- listen to Firestore poseRules/bigtoe document for live updates ---
+  useEffect(() => {
+    const cfgRef = doc(db, "poseRules", "bigtoe");
     const unsub = onSnapshot(
-      ref,
+      cfgRef,
       (snap) => {
-        if (snap.exists()) {
+        try {
+          if (!snap.exists()) {
+            console.log("bigtoe config: doc does not exist");
+            return;
+          }
           const data = snap.data();
+          console.log("bigtoe config snapshot:", data);
 
-          // robust parsing: allow numeric or numeric strings
-          const hipVal = typeof data.hipAngleLimit === "number"
-            ? data.hipAngleLimit
-            : (typeof data.hipAngleLimit === "string" ? Number(data.hipAngleLimit) : undefined);
+          // Prefer an explicit updatedAt timestamp (Firestore Timestamp),
+          // otherwise use now as fallback.
+          const cfgTs =
+            data?.updatedAt && typeof data.updatedAt.toMillis === "function"
+              ? data.updatedAt.toMillis()
+              : Date.now();
 
-          const holdVal = typeof data.holdMs === "number"
-            ? data.holdMs
-            : (typeof data.holdMs === "string" ? Number(data.holdMs) : undefined);
+          if (cfgTs <= (lastConfigTsRef.current || 0)) {
+            console.log("bigtoe config: stale update, ignoring", cfgTs, lastConfigTsRef.current);
+            return;
+          }
+          lastConfigTsRef.current = cfgTs;
 
-          setConfig(prev => ({
-            hipAngleLimit: Number.isFinite(hipVal) ? hipVal : prev.hipAngleLimit,
-            holdMs: Number.isFinite(holdVal) ? holdVal : prev.holdMs,
-          }));
-          console.log("Loaded config from Firestore:", { hipVal, holdVal });
-        } else {
-          console.log("poseRules/bigtoe not found — using defaults.");
+          // Robust parsing for hip angle and hold:
+          const hip = Number(data.hipAngleLimit ?? data.hipAngle ?? 80);
+
+          let hold = null;
+          if (data?.holdMs != null) {
+            hold = Number(data.holdMs);
+          } else if (data?.holdSeconds != null) {
+            hold = Number(data.holdSeconds) * 1000;
+          }
+
+          console.log("bigtoe parsed values -> hip:", hip, "hold (ms):", hold);
+
+          // Apply hip value if valid
+          if (!Number.isNaN(hip)) {
+            setHipAngleLimitState(hip);
+            hipRef.current = hip;
+          }
+
+          // If hold changed, apply it AND reset runtime timers/votes so new value takes effect immediately.
+          if (hold != null && !Number.isNaN(hold) && hold > 0) {
+            if (hold !== holdRef.current) {
+              console.log("bigtoe: applying new holdMsState:", hold, "(was", holdRef.current, ")");
+              setHoldMsState(hold);
+              holdRef.current = hold;
+
+              // Reset runtime measurement so new hold takes effect immediately
+              greenSinceRef.current = null;
+              badSinceRef.current = null;
+              stoppedRef.current = false;
+              passBuf.current = Array(8).fill(false);
+              passIdx.current = 0;
+
+              setShowDone(false);
+              setAllGoodState(false);
+            } else {
+              console.log("bigtoe: hold unchanged, no runtime reset");
+            }
+          } else {
+            console.log("bigtoe: hold value invalid or missing, keeping existing holdMsState:", holdRef.current);
+          }
+        } catch (err) {
+          console.error("bigtoe config onSnapshot parsing error:", err);
         }
       },
       (err) => {
-        console.error("Error listening to poseRules/bigtoe:", err);
+        console.error("bigtoe config onSnapshot error:", err);
       }
     );
 
     return () => unsub();
   }, []);
 
+  // --- Camera + Mediapipe loop (run once, read config via refs) ---
   useEffect(() => {
     let rafId;
     let startLoopTimer;
@@ -157,7 +262,8 @@ export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
     }
 
     function sizeCanvasAndStart() {
-      const v = videoRef.current, c = canvasRef.current;
+      const v = videoRef.current,
+        c = canvasRef.current;
       if (!v || !c) return;
 
       c.width = v.videoWidth || 640;
@@ -174,8 +280,8 @@ export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
       if (stoppedRef.current) return;
 
       const lm = landmarkerRef.current,
-            v  = videoRef.current,
-            c  = canvasRef.current;
+        v = videoRef.current,
+        c = canvasRef.current;
 
       if (!lm || !v || !c) {
         rafId = requestAnimationFrame(loop);
@@ -212,20 +318,15 @@ export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
       ctx.translate(c.width, 0);
       ctx.scale(-1, 1);
 
-      if (videoRef.current?.readyState >= 2)
-        ctx.drawImage(videoRef.current, 0, 0, c.width, c.height);
+      if (videoRef.current?.readyState >= 2) ctx.drawImage(videoRef.current, 0, 0, c.width, c.height);
 
       if (results.landmarks && results.landmarks[0]) {
         const utils = new DrawingUtils(ctx);
-        utils.drawConnectors(
-          results.landmarks[0],
-          PoseLandmarker.POSE_CONNECTIONS,
-          { color: "#333", lineWidth: 2 }
-        );
-        utils.drawLandmarks(
-          results.landmarks[0],
-          { color: "#ff3333", radius: 2 }
-        );
+        utils.drawConnectors(results.landmarks[0], PoseLandmarker.POSE_CONNECTIONS, {
+          color: "#333",
+          lineWidth: 3,
+        });
+        utils.drawLandmarks(results.landmarks[0], { color: "#fffdfdff",  radius: 4  });
       }
 
       ctx.restore();
@@ -233,8 +334,8 @@ export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
 
     function process(results) {
       const c = canvasRef.current,
-            W = c.width,
-            H = c.height;
+        W = c.width,
+        H = c.height;
 
       if (!results.landmarks || !results.landmarks[0]) {
         setAllGoodState(false);
@@ -252,37 +353,37 @@ export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
       const side = chooseSide(lm, W, H);
       setSideUsed(side);
 
-      const SH  = side==="left"?lm[11]:lm[12];
-      const HIP = side==="left"?lm[23]:lm[24];
-      const KNEE= side==="left"?lm[25]:lm[26];
-      const ANK = side==="left"?lm[27]:lm[28];
-      const WR  = side==="left"?lm[15]:lm[16];
-      const TOE = side==="left"?lm[31]:lm[32];
+      const SH = side === "left" ? lm[11] : lm[12];
+      const HIP = side === "left" ? lm[23] : lm[24];
+      const KNEE = side === "left" ? lm[25] : lm[26];
+      const ANK = side === "left" ? lm[27] : lm[28];
+      const WR = side === "left" ? lm[15] : lm[16];
+      const TOE = side === "left" ? lm[31] : lm[32];
 
-      const hipAngle  = angleDeg(SH, HIP, KNEE);        // fold
-      const kneeAngle = angleDeg(HIP, KNEE, ANK);       // straight
-      const legLen    = distPx(HIP, ANK, W, H) || 1;
+      const hipAngle = angleDeg(SH, HIP, KNEE); // fold
+      const kneeAngle = angleDeg(HIP, KNEE, ANK); // straight
+      const legLen = distPx(HIP, ANK, W, H) || 1;
 
-      const dToe  = distPx(WR, TOE, W, H);
-      const dAnk  = distPx(WR, ANK, W, H);
+      const dToe = distPx(WR, TOE, W, H);
+      const dAnk = distPx(WR, ANK, W, H);
 
-      // read live values from configRef (keeps loop stable)
-      const hipLimit = configRef.current?.hipAngleLimit ?? 80;
-      const holdMsCurrent = configRef.current?.holdMs ?? holdMs;
+      // read config from refs so we don't need to restart loop
+      const hipLimit = hipRef.current;
+      const holdLimit = holdRef.current;
 
       const torsoFoldOK = hipAngle <= hipLimit;
       const legStraightOK = kneeAngle >= 165;
       const toeOK =
-        dToe <= 0.40 * legLen ||
+        dToe <= 0.4 * legLen ||
         dAnk <= 0.35 * legLen ||
-        (Math.abs((WR.x - TOE.x)*W) <= 0.08*W && WR.y*H >= TOE.y*H - 0.06*H);
+        (Math.abs((WR.x - TOE.x) * W) <= 0.08 * W && WR.y * H >= TOE.y * H - 0.06 * H);
 
       const pass = torsoFoldOK && legStraightOK && toeOK;
 
       // Anti-flicker vote buffer (forgiving)
       passBuf.current[passIdx.current] = pass;
       passIdx.current = (passIdx.current + 1) % passBuf.current.length;
-      const goodFrames = passBuf.current.reduce((a,b)=>a+(b?1:0),0);
+      const goodFrames = passBuf.current.reduce((a, b) => a + (b ? 1 : 0), 0);
       const finalGood = goodFrames >= 4; // 4/8 frames good = OK
 
       setAllGoodState(finalGood);
@@ -294,20 +395,17 @@ export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
         if (!greenSinceRef.current) greenSinceRef.current = now;
         badSinceRef.current = null;
 
-        if (!stoppedRef.current && now - greenSinceRef.current >= holdMsCurrent) {
+        // use holdLimit (from Firestore if present) for stopping
+        if (!stoppedRef.current && now - greenSinceRef.current >= holdLimit) {
           stoppedRef.current = true;
           setShowDone(true);
           setStatus("completed");
 
           const v = videoRef.current;
           if (v?.srcObject) {
-            v.srcObject.getTracks().forEach(t=>t.stop());
+            v.srcObject.getTracks().forEach((t) => t.stop());
             v.srcObject = null;
           }
-
-          // optionally close landmarker to free resources (if supported)
-          try { landmarkerRef.current?.close?.(); } catch(e) {}
-          landmarkerRef.current = null;
         }
       } else {
         // only reset if "bad" lasts long enough
@@ -328,19 +426,72 @@ export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
 
       const v = videoRef.current;
       if (v?.srcObject) v.srcObject.getTracks().forEach((t) => t.stop());
-
-      // close landmarker if present
-      try { landmarkerRef.current?.close?.(); } catch(e) {}
-      landmarkerRef.current = null;
     };
-  }, [badResetMs]); // do not include holdMs here so we don't recreate loop on config changes
+  }, []);
 
-  // progress seconds (for UI only) — read holdMs from configRef so UI shows live value
+  // progress seconds (for UI only)
   const progressSec = greenSinceRef.current
-    ? Math.max(0, ((performance.now() - greenSinceRef.current) / 1000)).toFixed(1)
+    ? Math.max(0, (performance.now() - greenSinceRef.current) / 1000).toFixed(1)
     : "0.0";
 
+
+  const POINTS_BIGTOE = 5;
+
+// === Save today result (idempotent per day) ===
+const saveBigToeForToday = async () => {
+  if (savingRef.current) return;
+  try {
+    const auth = getAuth();
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+      alert("Please sign in first.");
+      return;
+    }
+
+    const dayId = todayStrLocal();
+
+    // 1) Per-day record (idempotent)
+    const dayRef = doc(db, "users", uid, "exercises", "bigtoe", "days", dayId);
+    const existing = await getDoc(dayRef);
+    if (existing.exists()) {
+      setAlreadyDone(true);
+      setAlreadyPopup(true);
+      return;
+    }
+
+    savingRef.current = true;
+
+    // Write the day document
+    await setDoc(dayRef, {
+      date: dayId,
+      points: POINTS_BIGTOE, // was 5
+      savedAt: serverTimestamp(),
+    });
+
+    // 2) Bump user's finalScore atomically and update updatedAt
+    const userRef = doc(db, "users", uid);
+    await setDoc(
+      userRef,
+      {
+        finalScore: increment(POINTS_BIGTOE),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true } // creates the field/doc if missing
+    );
+
+    setAlreadyDone(true);
+  } catch (e) {
+    console.error("saveBigToeForToday error:", e);
+  } finally {
+    savingRef.current = false;
+  }
+};
+
+
   return (
+      <div className="yoga-strip" ref={stripRef}>
+    {/* Slide 1: Big Toe */}
+    <section className="yoga-slide">
     <div className="bt-container">
       <h2 className="stoke-text boe">Big Toe Pose – Padangushthasana</h2>
 
@@ -352,7 +503,7 @@ export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
         muted
         width={640}
         height={480}
-        style={{ position: "absolute", left:"-9999px"}}
+        style={{ position: "absolute", left: "-9999px" }}
       />
       <div className="bt-stage">
         <canvas
@@ -364,9 +515,7 @@ export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
 
         {/* Right column */}
         <div className="bt-ref-plain">
-          <span className="bt-tip-plain">
-            For this pose, stand in a proper side view facing the camera.
-          </span>
+          <span className="bt-tip-plain">For this pose, stand in a proper side view facing the camera.</span>
           <img src={Bigtoeimg} className="bt-pose-img" alt="ref" draggable="false" />
         </div>
       </div>
@@ -376,24 +525,53 @@ export default function BigToe({ holdMs = 60000, badResetMs = 3000 }) {
         <span className="bt-sep" />
         <span className="bt-label">Camera:</span> {status}
         <span className="bt-sep" />
-        <span className="bt-label">Hold:</span> {progressSec}s / {((configRef.current?.holdMs ?? holdMs)/1000)|0}s
+        <span className="bt-label">Hold:</span> {progressSec}s / {(holdMsState / 1000) | 0}s
       </div>
 
       <p className="bt-note">
-        Side view only: hip ≤ {configRef.current?.hipAngleLimit ?? 80}°, knee ≥ 165°, wrist near big toe. (Small flickers won’t reset the timer.)
+        Side view only: hip ≤ {hipAngleLimitState}°, knee ≥ 165°, wrist near big toe. (Small flickers won’t reset the timer.)
       </p>
 
-      {showDone && (
+    {showDone && !nextYoga && (
+          <div className="bt-done">
+            <div className="bt-done-card">
+              <h3>Great job! ✅</h3>
+              <p>You held the pose for {(holdMsState / 1000) | 0} seconds.</p>
+              <button
+                className="resetbutton"
+                onClick={async () => {
+                    await saveBigToeForToday(); // store to Firestore (only once per day)
+                    setShowDone(false);
+                    setNextYoga(true); // move to next Yoga
+                  }}
+              >
+                Do next Yoga
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+
+    {/* Slide 2: Bridge */}
+    {nextYoga && (
+      <section className="yoga-slide" ref={bridgeRef}>
+        <BridgePose />
+      </section>
+    )}
+
+    {/* Already finished popup */}
+      {alreadyPopup && (
         <div className="bt-done">
           <div className="bt-done-card">
-            <h3>Great job! ✅</h3>
-            <p>You held the pose for {(((configRef.current?.holdMs ?? holdMs))/1000)|0} seconds.</p>
-            <button className="resetbutton" onClick={() => window.location.reload()}>
-              Restart Camera
+            <h3>Already finished today 🎉</h3>
+            <p>You’ve already completed Big Toe for {todayStrLocal()}.</p>
+            <button className="resetbutton" onClick={() => setAlreadyPopup(false)}>
+              OK
             </button>
           </div>
         </div>
       )}
-    </div>
-  );
+  </div>
+);
 }

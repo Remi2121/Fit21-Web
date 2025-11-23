@@ -417,12 +417,29 @@
 
 }
 
+/*
+ .fit-home-image,
+  .fit-home-image-back {
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /* Big headings smaller 
+  .fit-home-tag {
+    margin-top: 3rem;
+    font-size: 1.5rem;
+    line-height: 1.5;
+    padding-top: 1rem;
+    gap: 2rem;
+  }
+*/
 
 
   /* Hero images adjust */
   .fit-home-image {
     position: relative;
-    top: 2.5rem;
+    top: 8rem;
     right: 0;
     width: 80%;
     max-width: 300px;
@@ -433,7 +450,7 @@
 
   .fit-home-image-back {
     position: relative;
-    top: -27.5rem;
+    top: -24rem;
     left: 2rem;
     right: 1rem;
     width: 50%;

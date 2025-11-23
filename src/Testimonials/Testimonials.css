@@ -203,3 +203,18 @@
   }
 }
 
+/* in Testimonials.css */
+.right-t > .ach-video {
+  position: relative;
+  width: 18rem;
+  height: 22rem;
+  object-fit: cover;
+  z-index: 3;
+  border-radius: 12px;
+}
+@media (max-width: 768px) {
+  .right-t > .ach-video {
+    width: 15.5rem;
+    height: 19rem;
+  }
+}

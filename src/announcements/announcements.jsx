@@ -85,6 +85,7 @@ const guessMime = (url) => {
 };
 
 export default function Announcement() {
+  const transition = { type: "spring", duration: 3 };
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [idx, setIdx] = useState(0);
@@ -230,11 +231,15 @@ export default function Announcement() {
                 </div>
               )}
             </div>
-
-            <div className="announce-text">
+           
+            <motion.div 
+            initial={{ opacity: 0, x: -100 }}
+          transition={{ ...transition, duration: 3 }}
+          whileInView={{ opacity: 1, x: 0 }}
+            className="announce-text">
               <h3>{ann.title || "Untitled"}</h3>
               {ann.body && <p>{ann.body}</p>}
-            </div>
+            </motion.div>
           </div>
         )}
       </div>
