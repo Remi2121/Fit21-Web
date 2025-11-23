@@ -7,7 +7,7 @@ import Pushup from "../../assets/pushup.png";
 
 // Firebase
 import { db } from "../../firebase";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp ,increment} from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 export default function PushUpCounter() {
@@ -165,30 +165,45 @@ export default function PushUpCounter() {
     return angle;
   }
 
-  // Save once
   async function finalizeAndSave() {
-    if (sessionActiveRef.current) return;
-    sessionActiveRef.current = true;
-    const finalPoints = Math.min(countRef.current, effectiveMax());
-    try {
-      if (!userId) return;
-      const ref = doc(db, "users", userId, "exercises", exerciseName, "days", todayId);
-      await setDoc(ref, {
-        date: todayId,
-        points: finalPoints,
-        adminWindowSeconds: winSec(),
-        adminMaxPoints: Number(maxPoints) || 20,
-        adminPerDayMax: Number(perDayMax) || 20,
-        savedAt: serverTimestamp(),
-      });
-      setHasCompletedToday(true);
-      setFinishedMessage(`Finished today with ${finalPoints} push-ups. Do tomorrow 🙂`);
-    } catch (e) {
-      console.error("Save error:", e);
-    } finally {
-      cleanupPose();
-    }
+  if (sessionActiveRef.current) return;
+  sessionActiveRef.current = true;
+
+  const finalPoints = Math.min(countRef.current, effectiveMax());
+  try {
+    if (!userId) return;
+
+    // 1️⃣  Save today’s pushup record
+    const ref = doc(db, "users", userId, "exercises", exerciseName, "days", todayId);
+    await setDoc(ref, {
+      date: todayId,
+      points: finalPoints,
+      adminWindowSeconds: winSec(),
+      adminMaxPoints: Number(maxPoints) || 20,
+      adminPerDayMax: Number(perDayMax) || 20,
+      savedAt: serverTimestamp(),
+    });
+
+    // 2️⃣  Increment the user's total finalScore atomically
+    const userRef = doc(db, "users", userId);
+    await setDoc(
+      userRef,
+      {
+        finalScore: increment(finalPoints),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true } // auto-create if missing
+    );
+
+    setHasCompletedToday(true);
+    setFinishedMessage(`Finished today with ${finalPoints} push-ups. Do tomorrow 🙂`);
+  } catch (e) {
+    console.error("Save error:", e);
+  } finally {
+    cleanupPose();
   }
+}
+
 
   // Countdown
   function startCountdownIfNeeded() {
