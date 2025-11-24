@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-useless-computed-key */
 // src/Admin/components/Rules/Rules.jsx
 import React, { useEffect, useState } from "react";
@@ -62,7 +63,6 @@ export default function Rules() {
     })();
 
     return () => unsub && unsub();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const validateBigToe = () => {
@@ -158,7 +158,6 @@ export default function Rules() {
     })();
 
     return () => unsub && unsub();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const validatePushup = () => {
@@ -246,7 +245,6 @@ export default function Rules() {
     })();
 
     return () => unsub && unsub();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const validateBridge = () => {
@@ -288,8 +286,7 @@ export default function Rules() {
     setTimeout(() => setBpMsg(""), 2500);
   };
 
-  // ===== Squat (NEW) =====
-  // Same schema as push-up: Seconds, maxPoints, "maximumcount perday", updatedAt
+  // ===== Squat (existing) =====
   const squatRef = doc(db, "poseRules", "squat");
   const [sqSeconds, setSqSeconds] = useState("");
   const [sqMaxPoints, setSqMaxPoints] = useState("");
@@ -330,7 +327,6 @@ export default function Rules() {
     })();
 
     return () => unsub && unsub();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const validateSquat = () => {
@@ -384,12 +380,218 @@ export default function Rules() {
     setTimeout(() => setSqMsg(""), 2500);
   };
 
+  // ===== Plank (NEW) =====
+  const plankRef = doc(db, "poseRules", "plank");
+  const [plSeconds, setPlSeconds] = useState("");
+  const [plMaxPoints, setPlMaxPoints] = useState("");
+  const [plSaving, setPlSaving] = useState(false);
+  const [plMsg, setPlMsg] = useState("");
+
+  useEffect(() => {
+    const unsub = onSnapshot(
+      plankRef,
+      (snap) => {
+        if (snap.exists()) {
+          const d = snap.data();
+          const s = d?.Seconds;
+          const mp = d?.maxPoints;
+          setPlSeconds(typeof s === "number" ? s : "");
+          setPlMaxPoints(typeof mp === "number" ? mp : "");
+        } else {
+          setPlSeconds("");
+          setPlMaxPoints("");
+        }
+      },
+      (err) => {
+        console.error("Plank rules onSnapshot:", err);
+        setPlMsg("Failed to subscribe to Plank rules.");
+      }
+    );
+
+    (async () => {
+      try {
+        await getDoc(plankRef);
+      } catch (e) {
+        console.warn("Initial Plank read failed:", e);
+      }
+    })();
+
+    return () => unsub && unsub();
+  }, []);
+
+  const validatePlank = () => {
+    setPlMsg("");
+    const s = Number(plSeconds);
+    const mp = Number(plMaxPoints);
+    if (plSeconds === "" || isNaN(s) || s <= 0) {
+      setPlMsg("Enter a valid hold time (seconds > 0).");
+      return false;
+    }
+    if (plMaxPoints === "" || isNaN(mp) || mp <= 0) {
+      setPlMsg("Enter a valid maxPoints (> 0).");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSavePlank = async (e) => {
+    e?.preventDefault?.();
+    if (!validatePlank()) return;
+    setPlMsg("");
+    setPlSaving(true);
+    try {
+      const payload = {
+        Seconds: Number(plSeconds),
+        maxPoints: Number(plMaxPoints),
+        updatedAt: serverTimestamp(),
+      };
+      await setDoc(plankRef, payload, { merge: true });
+      setPlMsg("✅ Plank rules saved.");
+    } catch (err) {
+      console.error("Save Plank rules error:", err);
+      setPlMsg("❌ Failed to save Plank rules. See console.");
+    } finally {
+      setPlSaving(false);
+      setTimeout(() => setPlMsg(""), 3000);
+    }
+  };
+
+  const handleResetDefaultsPlank = () => {
+    setPlSeconds(60);
+    setPlMaxPoints(10);
+    setPlMsg("Defaults applied (not saved). Click Save to persist.");
+    setTimeout(() => setPlMsg(""), 2500);
+  };
+
+  /* =========================
+   * ===== Chair (SIMPLIFIED) =====
+   * poseRules/chair
+   * Fields: holdSeconds|holdMs + kneeMin,kneeMax,hipMin,hipMax
+   * ========================= */
+  const chairRef = doc(db, "poseRules", "chair");
+
+  // Hold
+  const [chSeconds, setChSeconds] = useState("");
+
+  // Only 4 angles
+  const defaultChair = { kneeMin: 70, kneeMax: 150, hipMin: 30, hipMax: 150 };
+  const [ch, setCh] = useState(defaultChair);
+  const [chSaving, setChSaving] = useState(false);
+  const [chMsg, setChMsg] = useState("");
+
+  useEffect(() => {
+    const unsub = onSnapshot(
+      chairRef,
+      (snap) => {
+        if (!snap.exists()) {
+          setCh(defaultChair);
+          setChSeconds("");
+          return;
+        }
+        const d = snap.data();
+
+        // hold
+        if (d?.holdMs != null) setChSeconds((Number(d.holdMs) / 1000) || "");
+        else if (d?.holdSeconds != null) setChSeconds(Number(d.holdSeconds) || "");
+        else setChSeconds("");
+
+        // only these four
+        setCh({
+          kneeMin: typeof d?.kneeMin === "number" ? d.kneeMin : defaultChair.kneeMin,
+          kneeMax: typeof d?.kneeMax === "number" ? d.kneeMax : defaultChair.kneeMax,
+          hipMin:  typeof d?.hipMin  === "number" ? d.hipMin  : defaultChair.hipMin,
+          hipMax:  typeof d?.hipMax  === "number" ? d.hipMax  : defaultChair.hipMax,
+        });
+      },
+      (err) => {
+        console.error("Chair rules onSnapshot:", err);
+        setChMsg("Failed to subscribe to Chair rules.");
+      }
+    );
+
+    (async () => {
+      try {
+        await getDoc(chairRef);
+      } catch (e) {
+        console.warn("Initial Chair read failed:", e);
+      }
+    })();
+
+    return () => unsub && unsub();
+  }, []);
+
+  const validateChair = () => {
+    setChMsg("");
+    const s = Number(chSeconds);
+    if (chSeconds === "" || isNaN(s) || s <= 0) {
+      setChMsg("Enter a valid Chair hold time (seconds > 0).");
+      return false;
+    }
+    if (
+      ![ch.kneeMin, ch.kneeMax, ch.hipMin, ch.hipMax].every((v) => Number.isFinite(v))
+    ) {
+      setChMsg("Angles must be numbers.");
+      return false;
+    }
+    if (ch.kneeMin >= ch.kneeMax) {
+      setChMsg("kneeMin must be < kneeMax.");
+      return false;
+    }
+    if (ch.hipMin >= ch.hipMax) {
+      setChMsg("hipMin must be < hipMax.");
+      return false;
+    }
+    if (
+      ch.kneeMin < 0 || ch.kneeMax > 180 ||
+      ch.hipMin < 0  || ch.hipMax > 180
+    ) {
+      setChMsg("Angles must be between 0 and 180.");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSaveChair = async (e) => {
+    e?.preventDefault?.();
+    if (!validateChair()) return;
+    setChMsg("");
+    setChSaving(true);
+    try {
+      const sec = Number(chSeconds);
+      const payload = {
+        holdSeconds: sec,
+        holdMs: Math.round(sec * 1000),
+        kneeMin: Number(ch.kneeMin),
+        kneeMax: Number(ch.kneeMax),
+        hipMin:  Number(ch.hipMin),
+        hipMax:  Number(ch.hipMax),
+        updatedAt: serverTimestamp(),
+      };
+      await setDoc(chairRef, payload, { merge: true });
+      setChMsg("✅ Chair rules saved.");
+    } catch (err) {
+      console.error("Save Chair rules error:", err);
+      setChMsg("❌ Failed to save Chair rules. See console.");
+    } finally {
+      setChSaving(false);
+      setTimeout(() => setChMsg(""), 3000);
+    }
+  };
+
+  const handleResetDefaultsChair = () => {
+    setChSeconds(10);
+    setCh(defaultChair);
+    setChMsg("Defaults applied (not saved). Click Save to persist.");
+    setTimeout(() => setChMsg(""), 2500);
+  };
+
+  // ===== UI =====
   if (loading) return <div className="rules-wrap">Loading rules…</div>;
 
   return (
     <div className="rules-wrap">
-      {/* ===== BigToe section ===== */}
-      <h2 className="rules-title">Pose Rules — Big Toe (admin)</h2>
+      {/* ===== BigToe ===== */}
+      <h2 className="rules-title">Pose Rules — Big Toe </h2>
 
       <form className="rules-form" onSubmit={handleSaveBigToe}>
         <label className="rules-label">
@@ -433,9 +635,9 @@ export default function Rules() {
         {message && <div className="rules-msg">{message}</div>}
       </form>
 
-      {/* ===== Bridge Pose section ===== */}
+      {/* ===== Bridge ===== */}
       <h2 className="rules-title" style={{ marginTop: 28 }}>
-        Pose Rules — Bridge (admin)
+        Pose Rules — Bridge 
       </h2>
 
       <form className="rules-form" onSubmit={handleSaveBridge}>
@@ -467,9 +669,99 @@ export default function Rules() {
         {bpMsg && <div className="rules-msg">{bpMsg}</div>}
       </form>
 
-      {/* ===== Push-up section ===== */}
+     {/* ===== Chair (SIMPLIFIED) ===== */}
       <h2 className="rules-title" style={{ marginTop: 28 }}>
-        Pose Rules — Push-Up (admin)
+        Pose Rules — Chair 
+      </h2>
+
+      <form className="rules-form" onSubmit={handleSaveChair}>
+        <label className="rules-label">
+          Hold time (seconds)
+          <input
+            className="rules-input"
+            type="number"
+            value={chSeconds}
+            onChange={(e) => setChSeconds(e.target.value)}
+            min="0.1"
+            step="0.1"
+          />
+        </label>
+
+        {/* Horizontal row with 4 angle inputs */}
+        <div className="rules-row">
+          <label className="rules-label-inline">
+            kneeMin
+            <input
+              className="rules-input"
+              type="number"
+              value={ch.kneeMin}
+              step="1"
+              min="0"
+              max="180"
+              onChange={(e) => setCh({ ...ch, kneeMin: Number(e.target.value) })}
+            />
+          </label>
+
+          <label className="rules-label-inline">
+            kneeMax
+            <input
+              className="rules-input"
+              type="number"
+              value={ch.kneeMax}
+              step="1"
+              min="0"
+              max="180"
+              onChange={(e) => setCh({ ...ch, kneeMax: Number(e.target.value) })}
+            />
+          </label>
+
+          <label className="rules-label-inline">
+            hipMin
+            <input
+              className="rules-input"
+              type="number"
+              value={ch.hipMin}
+              step="1"
+              min="0"
+              max="180"
+              onChange={(e) => setCh({ ...ch, hipMin: Number(e.target.value) })}
+            />
+          </label>
+
+          <label className="rules-label-inline">
+            hipMax
+            <input
+              className="rules-input"
+              type="number"
+              value={ch.hipMax}
+              step="1"
+              min="0"
+              max="180"
+              onChange={(e) => setCh({ ...ch, hipMax: Number(e.target.value) })}
+            />
+          </label>
+        </div>
+
+        <div className="rules-actions">
+          <button className="rules-save" type="submit" disabled={chSaving}>
+            {chSaving ? "Saving…" : "Save rules"}
+          </button>
+          <button
+            type="button"
+            className="rules-default"
+            onClick={handleResetDefaultsChair}
+          >
+            Reset defaults
+          </button>
+        </div>
+
+        {chMsg && <div className="rules-msg">{chMsg}</div>}
+      </form>
+    
+
+      {/* ===== Push-Up ===== */}
+      <h2 className="rules-title" style={{ marginTop: 28 }}>
+        Pose Rules — Push-Up
       </h2>
 
       <form className="rules-form" onSubmit={handleSavePushup}>
@@ -525,9 +817,9 @@ export default function Rules() {
         {puMsg && <div className="rules-msg">{puMsg}</div>}
       </form>
 
-      {/* ===== Squat section (NEW) ===== */}
+      {/* ===== Squat ===== */}
       <h2 className="rules-title" style={{ marginTop: 28 }}>
-        Pose Rules — Squat (admin)
+        Pose Rules — Squat 
       </h2>
 
       <form className="rules-form" onSubmit={handleSaveSquat}>
@@ -582,6 +874,53 @@ export default function Rules() {
 
         {sqMsg && <div className="rules-msg">{sqMsg}</div>}
       </form>
-    </div>
+
+      {/* ===== Plank ===== */}
+      <h2 className="rules-title" style={{ marginTop: 28 }}>
+        Pose Rules — Plank 
+      </h2>
+
+      <form className="rules-form" onSubmit={handleSavePlank}>
+        <label className="rules-label">
+          Seconds (hold time)
+          <input
+            className="rules-input"
+            type="number"
+            value={plSeconds}
+            onChange={(e) => setPlSeconds(e.target.value)}
+            min="1"
+            step="1"
+          />
+        </label>
+
+        <label className="rules-label">
+          maxPoints
+          <input
+            className="rules-input"
+            type="number"
+            value={plMaxPoints}
+            onChange={(e) => setPlMaxPoints(e.target.value)}
+            min="1"
+            step="1"
+          />
+        </label>
+
+        <div className="rules-actions">
+          <button className="rules-save" type="submit" disabled={plSaving}>
+            {plSaving ? "Saving…" : "Save rules"}
+          </button>
+          <button
+            type="button"
+            className="rules-default"
+            onClick={handleResetDefaultsPlank}
+          >
+            Reset defaults
+          </button>
+        </div>
+
+        {plMsg && <div className="rules-msg">{plMsg}</div>}
+      </form>
+
+      </div>
   );
 }

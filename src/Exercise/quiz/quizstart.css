@@ -27,7 +27,7 @@
   z-index: -1;                /* behind your content */
   background:
     radial-gradient(circle at 30% 10%, rgba(255,0,0,0.22), transparent 65%),
-    linear-gradient(180deg, #000 0%, #330000 45%, #b30000 100%);
+    linear-gradient(180deg, #000 0%, #330000 45%, #b300006d 100%);
   background-attachment: fixed;
   background-repeat: no-repeat;
   background-size: cover;
@@ -161,7 +161,7 @@
 }
 .home-btn{
   text-decoration:none;
-  border:1px solid rgba(255,255,255,0.25);
+  border:1px solid rgba(255, 255, 255, 0.612);
   padding:10px 14px;
   border-radius:12px;
   color:#fff;
@@ -170,7 +170,7 @@
   transition: background .2s ease, transform .1s ease, border-color .2s ease;
 }
 .home-btn:hover{
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.193);
   border-color: rgba(255,255,255,0.4);
 }
 .home-btn:active{ transform: translateY(1px); }

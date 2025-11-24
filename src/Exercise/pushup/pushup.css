@@ -143,3 +143,97 @@
   opacity: 0.75;
   text-align: center;
 }
+
+/* === Push-Up: Mobile polish (ADD AFTER your current CSS) === */
+@media (max-width: 600px) {
+  .pushup-container {
+    padding: calc(12px + env(safe-area-inset-top, 0)) 12px 20px;
+    background-attachment: scroll;   /* iOS smooth scroll */
+    background-size: 140% 140%;
+  }
+
+  .stoke-text {
+    font-size: 1.3rem;
+    line-height: 1.25;
+    margin: 6px 0 8px;
+    text-align: center;
+  }
+
+  .pushup-stage {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding-top: 0.25rem;
+  }
+
+  /* Canvas responsive & sharp */
+  .pushup-stage canvas {
+    width: 100%;
+    max-width: 92vw;
+    aspect-ratio: 4 / 3;      /* keeps 640x480 look */
+    height: auto !important;
+    border-radius: 12px !important;
+    border-width: 2px !important;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.3);
+  }
+
+  /* Right column under canvas */
+  .pushup-plain {
+    width: 100%;
+    max-width: 92vw;
+    padding-left: 0;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pushup-tip-plain {
+    font-size: 0.92rem;
+    padding: 8px 10px;
+    text-align: center;
+  }
+
+  .pushup-pose-img {
+    width: 82vw;
+    max-width: 82vw;
+    border-radius: 12px;
+  }
+
+  /* Status line wrap */
+  .status-line {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 12px;
+    font-size: 0.95rem;
+    margin-top: 6px;
+    text-align: center;
+  }
+
+  /* Timer box: full width & tappable */
+  .timer-box {
+    width: 92vw;
+    height: auto;
+    padding: 12px 14px;
+    border-radius: 12px;
+    margin-top: 8px;
+  }
+  .timer-box-title { font-size: 11px; }
+  .timer-box-chip  { font-size: 11px; }
+  .timer-box-value { font-size: 1.6rem; margin: 6px 0; }
+  .timer-box-value span { font-size: 1rem; }
+  .timer-box-hint  { font-size: 0.9rem; }
+
+  .timer-box-bar { height: 3px; }
+}
+
+/* Ultra-small phones */
+@media (max-width: 420px) {
+  .stoke-text        { font-size: 1.15rem; }
+  .pushup-tip-plain  { font-size: 0.88rem; }
+  .timer-box-value   { font-size: 1.4rem; }
+}
+
+/* Global: prevent accidental horizontal scroll */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}

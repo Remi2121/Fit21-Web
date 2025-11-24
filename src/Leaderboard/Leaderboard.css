@@ -249,5 +249,6 @@
     min-width: 160px !important;
     padding: 10px 22px !important;
     border-radius: 28px !important;
+    cursor: pointer !important;
   }
 }

@@ -38,8 +38,8 @@
 /* decorative outline frame behind the image */
 .right-t .frame{
   position: absolute;
-  inset: -0.7rem 11rem auto auto;   /* top/right offset */
-  width: 17rem;
+  inset: -0.7rem 5rem auto auto;   /* top/right offset */
+  width: 25rem;
   height: 20rem;
   border: 2px solid red;
   background: transparent;
@@ -52,9 +52,9 @@
 .right-t .bg-block{
   position: absolute;
   top: 4rem;
-  width: 17rem;
+  width: 25rem;
   height: 19rem;
-  right: 7rem;
+  right: 1rem;
   background: var(--planCard);
   z-index: 2;
   border-radius: 8px;
@@ -206,11 +206,12 @@
 /* in Testimonials.css */
 .right-t > .ach-video {
   position: relative;
-  width: 18rem;
-  height: 22rem;
+  width: 25rem;
+  height: 21rem;
   object-fit: cover;
   z-index: 3;
   border-radius: 12px;
+  margin-left: 4rem;
 }
 @media (max-width: 768px) {
   .right-t > .ach-video {

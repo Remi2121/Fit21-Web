@@ -1,3 +1,10 @@
+:root {
+  --footerMaxW: 1200px;
+  --footerPad: 1.25rem;
+  --footerRadius: 18px;
+}
+
+/* ===== Container ===== */
 .Footer-container {
   position: relative;
   background: var(--appColor);
@@ -5,95 +12,186 @@
   mix-blend-mode: overlay;
 }
 
-.Footer-container > hr {
-  border: 1px solid var(--lightgray);
+/* ===== Divider Line ===== */
+.footer-divider {
+  border: 1rem;
+  height: 1px;
+  background: black;
+  opacity: 0.8;
 }
 
+/* ===== Footer Layout ===== */
 .footer {
-  padding-bottom: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
+  margin: 0 auto;
+  max-width: var(--footerMaxW);
+  padding: clamp(1rem, 2.5vw, 2rem) var(--footerPad);
+  display: grid;
+  grid-template-columns: 1.1fr 2fr auto;
   align-items: center;
-  justify-content: center;
+  gap: 1.25rem;
+  background: linear-gradient(
+    180deg,
+    rgb(0, 0, 0),
+    rgb(0, 0, 0)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--footerRadius);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
 }
 
-/* Small neat logo section */
-.social-links {
+/* ===== Brand Section ===== */
+.footer-brand {
   display: flex;
-  gap: 50rem;
   align-items: center;
-  justify-content: center;
+  gap: 0.75rem;
 }
 
-.social-links img {
-  width: 2.5rem;
-  height: 2.5rem;
-  cursor: pointer;
-  transition: transform 0.3s ease;
+.brand-badge {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: radial-gradient(
+    120% 120% at 10% 10%,
+    #ff6a6a 0%,
+    #ff3b3b 45%,
+    #ff1e56 100%
+  );
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  box-shadow: 0 6px 18px rgba(255, 61, 80, 0.45);
 }
 
-.social-links img:hover {
-  transform: scale(1.2);
+.brand-text h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: #ffffff;
+  font-weight: 800;
+}
+.brand-text span {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
 }
 
-/* Description styles */
+/* ===== Description ===== */
 .footer-description {
-  
-  color: white;
-  max-width: 600px;
+  color: #eaeaea;
   line-height: 1.5;
 }
-
-.footer-description h3 {
-  text-align: center;
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-  color: #ff4747;
-}
 .footer-description p {
-  font-size: 1rem;
-  font-weight: bold;
+  margin: 0;
+  font-size: 0.98rem;
   color: #f1f1f1;
 }
 
-/* blur background */
+/* ===== Social Icons ===== */
+.social-links {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.social-link {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  transition: transform 0.25s ease, border-color 0.25s ease,
+    background 0.25s ease;
+}
+
+.social-link:hover {
+  transform: translateY(-2px) scale(1.1);
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Icon colors */
+.social-links svg {
+  color: #ffffff;
+  transition: color 0.3s ease, transform 0.2s ease;
+}
+
+.social-link:hover svg {
+  color: #ff4747;
+  transform: scale(1.15);
+}
+
+/* ===== Blur Accents ===== */
 .blur-f-1,
 .blur-f-2 {
   position: absolute;
-  bottom: 0;
-  height: 5rem;
-  width: 100vw;
-  filter: blur(200px);
+  inset-inline: 0;
+  height: 6rem;
+  filter: blur(180px);
   z-index: -1;
 }
 
 .blur-f-1 {
-  left: 1rem;
-  background: linear-gradient(to right, red 40%, transparent 100%);
+  bottom: -1rem;
+  background: linear-gradient(
+    to right,
+    rgba(255, 71, 71, 0.6) 30%,
+    transparent 100%
+  );
 }
 
 .blur-f-2 {
-  right: 1rem;
-  background: linear-gradient(to left, rgb(237, 76, 55) 40%, transparent 100%);
+  bottom: -1rem;
+  background: linear-gradient(
+    to left,
+    rgba(237, 76, 55, 0.5) 30%,
+    transparent 100%
+  );
 }
 
-@media (max-width: 768px) {
+/* ===== Responsive ===== */
+@media (max-width: 992px) {
   .footer {
-    padding: 1rem;
-    gap: 1.5rem;
+    grid-template-columns: 1fr;
+    text-align: center;
   }
 
-  .social-links img {
-    width: 2rem;
-    height: 2rem;
+  .footer-brand {
+    justify-content: center;
   }
 
-  .footer-description h3 {
-    font-size: 1.2rem;
+  .social-links {
+    justify-content: center;
+  }
+
+  .footer-description {
+    order: 3;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+
+  .brand-text h3 {
+    font-size: 1.1rem;
   }
 
   .footer-description p {
-    font-size: 0.9rem;
+    font-size: 0.92rem;
+  }
+
+  .social-link {
+    width: 36px;
+    height: 36px;
   }
 }

@@ -92,3 +92,18 @@
   font-weight: 700;
   color: #bfffc3;
 }
+
+/* horizontal row for the 4 angle inputs */
+.rules-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;      /* wraps nicely on small screens */
+  margin-top: 10px;
+}
+.rules-label-inline {
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+}
+.rules-input { height: 40px; }
