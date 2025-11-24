@@ -1,40 +1,53 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 // src/components/LeaderBoard.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Headers from "../components/header/header.jsx";
 import "./Leaderboard.css";
 
 import { db } from "../firebase";
-import {
-  collection,
-  collectionGroup,
-  getDocs,
-} from "firebase/firestore";
+import { collection, collectionGroup, getDocs } from "firebase/firestore";
 
 export default function LeaderBoard() {
   const [activeTab, setActiveTab] = useState("user"); // "user" | "team"
-  const [userRank, setUserRank] = useState([]);       // [{id, name, email, points}]
-  const [teamFinal, setTeamFinal] = useState([]);     // [{id, name, description, finalScore, hasTeamPhysical}]
+  const [userRank, setUserRank] = useState([]); // [{id, name, email, points}]
+  const [teamFinal, setTeamFinal] = useState([]); // [{id, name, description, finalScore, hasTeamPhysical}]
   const [individualCombined, setIndividualCombined] = useState([]); // users NOT in any team
   const [loading, setLoading] = useState(true);
 
+  // keep admin emails in a ref (fast membership checks)
+  const adminEmailsRef = useRef(new Set());
+
   // team details (expand on click)
   const [expandedTeamId, setExpandedTeamId] = useState(null);
-  const [teamMembers, setTeamMembers] = useState({}); // { [teamId]: { loading: bool, items: [{username,email}] } }
+  const [teamMembers, setTeamMembers] = useState({}); // { [teamId]: { loading, items, error? } }
 
   // ---- helpers ----
   const normalizeEmail = (s = "") => (s || "").trim().toLowerCase();
-  // "remi@gmail.com" -> "remi_gmail_com"
   const emailToSlug = (s = "") =>
     normalizeEmail(s).replace(/@/g, "_").replace(/\./g, "_");
+
+  const isAdminEmail = (email = "") =>
+    adminEmailsRef.current.has(normalizeEmail(email));
 
   useEffect(() => {
     (async () => {
       setLoading(true);
 
+      // ---- Load ADMIN emails (doc id or "email" field) ----
+      const adminsSnap = await getDocs(collection(db, "admins"));
+      const adminSet = new Set();
+      adminsSnap.docs.forEach((d) => {
+        const idAsEmail = normalizeEmail(d.id);
+        if (idAsEmail) adminSet.add(idAsEmail);
+        const data = (d.data && d.data()) || {};
+        const fieldEmail = normalizeEmail(data.email || "");
+        if (fieldEmail) adminSet.add(fieldEmail);
+      });
+      adminEmailsRef.current = adminSet;
+
       // ---- Load USERS (online + physical flags) ----
       const usersSnap = await getDocs(collection(db, "users"));
-      const users = usersSnap.docs.map((d) => {
+      const usersRaw = usersSnap.docs.map((d) => {
         const raw = (d.data && d.data()) || {};
         const online = Number(raw.finalScore) || 0;
         const hasPhysical = Object.prototype.hasOwnProperty.call(
@@ -55,7 +68,10 @@ export default function LeaderBoard() {
         };
       });
 
-      // USER RANK (ONLINE ONLY)
+      // filter out admin accounts from any user-based listing
+      const users = usersRaw.filter((u) => !isAdminEmail(u.email));
+
+      // USER RANK (ONLINE ONLY, non-admins)
       const userRankSorted = [...users]
         .sort((a, b) => b.online - a.online)
         .map((u) => ({
@@ -85,9 +101,8 @@ export default function LeaderBoard() {
       const teamsSorted = teams.sort((a, b) => b.finalScore - a.finalScore);
       setTeamFinal(teamsSorted);
 
-      // ---- Get ALL team members (collectionGroup on 'members') ----
+      // ---- Get ALL team members (for "who is in a team" check) ----
       const membersSnap = await getDocs(collectionGroup(db, "members"));
-
       const memberEmailSet = new Set();
       const memberUidSet = new Set();
       const memberSlugIdSet = new Set();
@@ -102,7 +117,7 @@ export default function LeaderBoard() {
         if (m.id) memberSlugIdSet.add(String(m.id).toLowerCase());
       });
 
-      // ---- INDIVIDUAL (COMBINED) — ONLY users NOT in any team ----
+      // ---- INDIVIDUAL (COMBINED) — ONLY users NOT in any team (and not admins) ----
       const indivSorted = users
         .filter((u) => {
           const emailKey = normalizeEmail(u.email);
@@ -128,7 +143,7 @@ export default function LeaderBoard() {
     })();
   }, []);
 
-  // Load members for a given team (only once)
+  // Load members for a given team (only once) and hide admins in the members table
   const toggleTeam = async (teamId) => {
     if (expandedTeamId === teamId) {
       setExpandedTeamId(null);
@@ -136,7 +151,6 @@ export default function LeaderBoard() {
     }
     setExpandedTeamId(teamId);
 
-    // if already loaded, don't fetch again
     if (teamMembers[teamId]?.items) return;
 
     setTeamMembers((prev) => ({
@@ -146,14 +160,17 @@ export default function LeaderBoard() {
 
     try {
       const memSnap = await getDocs(collection(db, "teams", teamId, "members"));
-      const rows = memSnap.docs.map((d) => {
-        const md = (d.data && d.data()) || {};
-        return {
-          id: d.id,
-          username: md.username || md.name || "(No name)",
-          email: md.email || md.userEmail || "",
-        };
-      });
+      const rows = memSnap.docs
+        .map((d) => {
+          const md = (d.data && d.data()) || {};
+          return {
+            id: d.id,
+            username: md.username || md.name || "(No name)",
+            email: md.email || md.userEmail || "",
+          };
+        })
+        // hide admins inside team members view
+        .filter((m) => !isAdminEmail(m.email));
 
       setTeamMembers((prev) => ({
         ...prev,
@@ -162,7 +179,11 @@ export default function LeaderBoard() {
     } catch (e) {
       setTeamMembers((prev) => ({
         ...prev,
-        [teamId]: { loading: false, items: [], error: String(e?.message || e) },
+        [teamId]: {
+          loading: false,
+          items: [],
+          error: String(e?.message || e),
+        },
       }));
     }
   };
@@ -183,11 +204,7 @@ export default function LeaderBoard() {
     };
     const styleOk = { ...base, background: "rgba(0,255,0,0.12)" };
     const stylePend = { ...base, background: "rgba(255,165,0,0.16)" };
-    return (
-      <span style={ok ? styleOk : stylePend}>
-        {ok ? textIfOk : pendingText}
-      </span>
-    );
+    return <span style={ok ? styleOk : stylePend}>{ok ? textIfOk : pendingText}</span>;
   };
 
   return (
@@ -217,11 +234,9 @@ export default function LeaderBoard() {
           </div>
 
           <div className="table-scroll">
-            {loading && (
-              <div style={{ color: "#ddd", padding: 12 }}>Loading...</div>
-            )}
+            {loading && <div style={{ color: "#ddd", padding: 12 }}>Loading...</div>}
 
-            {/* ================= USER RANK (ONLINE ONLY) ================= */}
+            {/* USER RANK (ONLINE ONLY, admins removed) */}
             {activeTab === "user" && !loading && (
               <table className="leaderboard-table">
                 <thead>
@@ -243,10 +258,10 @@ export default function LeaderBoard() {
               </table>
             )}
 
-            {/* ================= TEAM RANK (FINAL) + EXPANDABLE DETAILS ================= */}
+            {/* TEAM RANK (Final). Members list hides admins */}
             {activeTab === "team" && !loading && (
               <>
-                <h3 style={{ margin: "8px 0 10px" }}>Teams — Final (Admin set)</h3>
+                <h3 style={{ margin: "8px 0 10px" , color:"white" }}>Teams — Final (Admin set)</h3>
                 <table className="leaderboard-table" style={{ marginBottom: 22 }}>
                   <thead>
                     <tr>
@@ -290,7 +305,6 @@ export default function LeaderBoard() {
                             </td>
                           </tr>
 
-                          {/* Expandable details row */}
                           {isOpen && (
                             <tr>
                               <td colSpan={3} style={{ background: "rgba(255,255,255,0.03)" }}>
@@ -310,10 +324,7 @@ export default function LeaderBoard() {
                                     <div style={{ color: "#bbb" }}>No members.</div>
                                   )}
                                   {tm && !tm.loading && tm.items?.length > 0 && (
-                                    <table
-                                      className="leaderboard-table"
-                                      style={{ margin: 0 }}
-                                    >
+                                    <table className="leaderboard-table" style={{ margin: 0 }}>
                                       <thead>
                                         <tr>
                                           <th style={{ width: 220 }}>Member</th>
@@ -347,9 +358,9 @@ export default function LeaderBoard() {
                   </tbody>
                 </table>
 
-                {/* Individuals — NOT in any team */}
-                <h3 style={{ margin: "8px 0 10px" }}>
-                  Individual (Not in any team): finalScore + finalScore_admin
+                {/* Individuals — NOT in any team (admins removed) */}
+                <h3 style={{ margin: "8px 0 10px" ,color:"white"}}>
+                  Individual (Not in any team): 
                 </h3>
                 <table className="leaderboard-table">
                   <thead>
