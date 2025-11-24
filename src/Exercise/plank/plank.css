@@ -157,8 +157,3 @@
   h3                { font-size: 0.95rem; }
 }
 
-/* Prevent horizontal scroll everywhere */
-html, body {
-  max-width: 100%;
-  overflow-x: hidden;
-}
