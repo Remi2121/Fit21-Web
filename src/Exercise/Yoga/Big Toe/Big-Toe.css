@@ -1,19 +1,23 @@
 /* ===== Big Toe Pose (Padangushthasana) — FULL CSS ===== */
-
 .bt-container {
+  position: relative;
+  min-height: 100vh;               /* make it cover full screen height */
+  width: 100%;
   text-align: center;
   padding: 16px 10px 24px;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   background: radial-gradient(1200px 700px at 20% 0%, #2f0303 0%, transparent 60%),
-    linear-gradient(135deg, #242425, #21050a);
+              linear-gradient(135deg, #242425, #21050a);
+  background-repeat: no-repeat;
+  background-size: cover;          /* make gradient fill */
+  background-attachment: fixed;    /* keep static behind canvas */
 }
-
 .bt-container h2 {
   margin: 6px 0 10px;
   font-weight: bold;
   letter-spacing: 0.2px;
   font-size: 2rem;
-  color: #fff;
+  
 }
 
 /* Stage + Canvas */
