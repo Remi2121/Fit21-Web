@@ -248,8 +248,3 @@
   .timer-box-value  { font-size: 1.4rem; }
 }
 
-/* Prevent horizontal scroll */
-html, body {
-  max-width: 100%;
-  overflow-x: hidden;
-}
