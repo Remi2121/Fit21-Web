@@ -216,15 +216,15 @@ export default function WarriorIII({ holdMs = 2000, badResetMs = 3000 }) {
       const dxTorso = (SH.x - HIP.x) * W;
       const dyTorso = (SH.y - HIP.y) * H;
       const torsoAngle = (Math.atan2(dyTorso, dxTorso) * 180) / Math.PI;
-      const torsoHorizontal = Math.abs(torsoAngle) < 25; // ~flat
+      const torsoHorizontal = Math.abs(torsoAngle) < 40; // ~flat
 
       // standing leg fairly straight
       const kneeAngle = angleDeg(HIP, KNEE, ANK);
-      const legStraight = kneeAngle >= 15;
+      const legStraight = kneeAngle >= 40;
 
       // back leg lifted: ankle roughly level with hip
       const backLegLifted =
-        Math.abs(ANK_BACK.y * H - HIP.y * H) < 80 &&
+        Math.abs(ANK_BACK.y * H - HIP.y * H) < 120 &&
         ANK_BACK.y * H <= HIP.y * H + 60;
 
       // arms inline with torso (shoulder-wrist angle close to torsoAngle)
