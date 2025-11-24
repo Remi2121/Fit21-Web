@@ -1,8 +1,7 @@
 import React from 'react'
 import BigToe from "./Big Toe/Big-Toe"
 import WarriorIII from "./WarriorIII/WarriorIII"
-import
- ChairPose from './Chair/Chairpose'
+import ChairPose from './Chair/Chairpose'
 const Yogo = () => {
   return (
     <div>
