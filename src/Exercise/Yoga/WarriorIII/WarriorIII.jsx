@@ -20,7 +20,7 @@ export default function WarriorIII({ holdMs = 2000, badResetMs = 3000 }) {
   // UI state
   const [status, setStatus] = useState("loading…");
   const [sideUsed, setSideUsed] = useState("—");
-  const [poseGood, setPoseGood] = useState(false);   // 🔴 / 🟢 glow control
+  const [poseGood, setPoseGood] = useState(false); // 🔴 / 🟢 glow control
   const [showDone, setShowDone] = useState(false);
 
   const greenSinceRef = useRef(null);
@@ -132,7 +132,7 @@ export default function WarriorIII({ holdMs = 2000, badResetMs = 3000 }) {
         return;
       }
 
-      if (ts - lastFrameTs > 33) {
+      if (ts - lastFrameTs > 80) {
         if (v.readyState >= 2) {
           let nowMs = Math.round(performance.now());
           if (nowMs <= lastTsRef.current) nowMs = lastTsRef.current + 1;
@@ -171,7 +171,7 @@ export default function WarriorIII({ holdMs = 2000, badResetMs = 3000 }) {
           { color: "#333", lineWidth: 2 }
         );
         utils.drawLandmarks(results.landmarks[0], {
-           color: "#ff3333",
+          color: "#ff3333",
           radius: 2,
         });
       }
@@ -210,41 +210,50 @@ export default function WarriorIII({ holdMs = 2000, badResetMs = 3000 }) {
       const WR_FWD = side === "left" ? lm[15] : lm[16]; // front arm
       const ANK_BACK = side === "left" ? lm[28] : lm[27]; // rough back leg
 
-      // --- Simple Warrior III checks (tune if needed) ---
+      // --- Simple Warrior III checks (EASY MODE) ---
 
-      // torso roughly horizontal
+      // torso roughly horizontal (more lenient)
       const dxTorso = (SH.x - HIP.x) * W;
       const dyTorso = (SH.y - HIP.y) * H;
       const torsoAngle = (Math.atan2(dyTorso, dxTorso) * 180) / Math.PI;
-      const torsoHorizontal = Math.abs(torsoAngle) < 40; // ~flat
+      // before: Math.abs(torsoAngle) < 40
+      const torsoHorizontal = Math.abs(torsoAngle) < 55; // allow more tilt
 
-      // standing leg fairly straight
+      // standing leg fairly straight (more lenient)
       const kneeAngle = angleDeg(HIP, KNEE, ANK);
-      const legStraight = kneeAngle >= 40;
+      // before: kneeAngle >= 140
+      const legStraight = kneeAngle >= 130;
 
-      // back leg lifted: ankle roughly level with hip
+      // back leg lifted (more lenient on height)
+      const backLegDy = (ANK_BACK.y - HIP.y) * H;
+      // before:
+      //   Math.abs(ANK_BACK.y*H - HIP.y*H) < 120 && ANK_BACK.y*H <= HIP.y*H + 60
+      // now: just make sure leg is not hanging too low
       const backLegLifted =
-        Math.abs(ANK_BACK.y * H - HIP.y * H) < 120 &&
-        ANK_BACK.y * H <= HIP.y * H + 60;
+        backLegDy < 140 && // ankle not too much below hip
+        backLegDy > -220;  // not forcing perfect straight line
 
-      // arms inline with torso (shoulder-wrist angle close to torsoAngle)
+      // arms inline with torso (more lenient)
       const dxArm = (WR_FWD.x - SH.x) * W;
       const dyArm = (WR_FWD.y - SH.y) * H;
       const armAngle = (Math.atan2(dyArm, dxArm) * 180) / Math.PI;
-      const armsInline = Math.abs(armAngle - torsoAngle) < 25;
+      // before: Math.abs(armAngle - torsoAngle) < 25
+      const armsInline = Math.abs(armAngle - torsoAngle) < 35;
 
       const pass =
         torsoHorizontal && legStraight && backLegLifted && armsInline;
 
-      // anti-flicker buffer
+      // anti-flicker buffer (more forgiving)
       passBuf.current[passIdx.current] = pass;
       passIdx.current =
         (passIdx.current + 1) % passBuf.current.length;
+
       const goodFrames = passBuf.current.reduce(
         (a, b) => a + (b ? 1 : 0),
         0
       );
-      const finalGood = goodFrames >= 4;
+      // before: goodFrames >= 4
+      const finalGood = goodFrames >= 3;
 
       setPoseGood(finalGood);
       setStatus(finalGood ? "holding pose" : "adjust pose");
@@ -346,7 +355,6 @@ export default function WarriorIII({ holdMs = 2000, badResetMs = 3000 }) {
         </div>
       </div>
 
-
       <div className="war3-status">
         <span>Side: {sideUsed}</span>
         <span className="war3-sep" />
@@ -358,8 +366,9 @@ export default function WarriorIII({ holdMs = 2000, badResetMs = 3000 }) {
       </div>
 
       <p className="war3-note">
-        Keep torso horizontal (~90° to standing leg), standing leg
-        straight, back leg lifted, arms roughly inline with torso.
+        Keep torso roughly horizontal, standing leg fairly straight,
+        back leg lifted, arms roughly inline with torso. Small
+        variations are OK 👍
       </p>
 
       {showDone && (
