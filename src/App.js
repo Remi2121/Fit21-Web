@@ -16,7 +16,7 @@ import Attendance from "./Attendance/Attendance.jsx";
 
 
 
-const db = getDatabase(app);
+
 function App() {
   return (
     <div className="App">
