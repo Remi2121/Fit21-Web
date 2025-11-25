@@ -205,11 +205,6 @@ const Fithome = () => {
             </div>
           </div>
 
-
-
-          <div className="fit-home-buttons">
-            <button className="btn">Learn More</button>
-          </div>
         </div>
 
         <div className="fit-home-right">

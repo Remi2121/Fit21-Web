@@ -1,7 +1,7 @@
 /* ===== THEME ===== */
 :root{
   --bg1: #0b0b0c;
-  --bg2: #bd3951;
+  --bg2: #3e0510;
   --card: rgba(255,255,255,0.06);
   --stroke: rgba(255,255,255,0.18);
   --text: #ffffff;
@@ -26,7 +26,7 @@
   font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
   color: var(--text);
   background:
-    radial-gradient(1200px 700px at 20% 0%, #790505 0%, transparent 60%),
+    radial-gradient(1200px 700px at 20% 0%, #5a0909 0%, transparent 60%),
     linear-gradient(135deg, var(--bg1), var(--bg2));
   padding: 24px clamp(16px, 3vw, 32px) clamp(16px, 3vw, 32px);
   overflow: hidden;

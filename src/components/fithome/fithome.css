@@ -3,9 +3,9 @@
   display:flex;
   justify-content:space-between;
   min-height:100svh; 
-  position: relative;     /* anchor absolutely-positioned children */
+  position: relative;
   isolation: isolate;
-              /* mobile-safe fullscreen */
+  background-color: rgb(31, 1, 1);
 }
 /* Left */
 .fit-home-left{
@@ -18,7 +18,7 @@
 .fit-home-right{
   flex:1;
   position:relative;
-  background-color:var(--red);
+  background: linear-gradient(90deg,#571805,#ff3e6854);
   min-height:100svh;
   height:auto;
 }
@@ -28,8 +28,7 @@
   margin-top:4rem;
   background-color:#363d36;
   border-radius:4rem;
-  /* width: fit-content;  <-- REMOVE */
-  display:inline-flex;          /* behaves like fit-content but wraps */
+  display:inline-flex;
   max-width:100%;
   padding:20px 13px;
   text-transform:uppercase;
@@ -101,6 +100,25 @@
   border:none;
 }
 
+/* ------------------- GLOBAL BUTTON FIX ------------------- */
+.btn{
+  background: #ff5722;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: .75rem 1rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-appearance: none; /* iOS Safari fix */
+  appearance: none;
+  transition: all 0.3s ease;
+}
+.btn:hover{ opacity: .9; }
+.btn:disabled{ opacity: .6; cursor: not-allowed; }
+.admin-popup-container .btn{ background:#ff22222e; color:#fff; }
+
+/* ------------------------------------------- */
 
 .buttbtn{
   position:absolute;
@@ -118,7 +136,6 @@
   align-items: center;
   border-radius: 2rem;
   height: 2.2rem;
-
 }
 
 .buttbtn:hover{
@@ -149,36 +166,26 @@
   text-decoration: none;
   font-weight: bold;
 }
-
-.ad-btn a:hover {
-  text-decoration: none;
-}
+.ad-btn a:hover { text-decoration: none; }
 .ad-btn:hover{
   cursor: pointer;
   background-color: rgb(211, 165, 165);
 }
 
-
+/* Workouts Section */
 .workouts-section {
   width: 100%;
-  /* fallbacks: older → newer; last supported wins */
-  min-height: 100vh;
-  min-height: 100svh;
   min-height: 100dvh;
-
   height: auto;
   background:var(--appColor);
   color: #fff;
   padding: 64px 16px;
-  /* keep content visible above gesture bar / notch */
   padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-
-  overflow-x: hidden; /* avoid tiny horizontal spill that reveals white */
+  overflow-x: hidden;
 }
 
 .fit-home-image{
@@ -187,7 +194,6 @@
     right: 0rem;
     min-width: 35rem;
     height: 30rem;
-
 }
 
 .fit-home-image-back{
@@ -198,20 +204,20 @@
     z-index:-1;
 }
 
- .fit-home-blur-f{
+.fit-home-blur-f{
   display: block !important;
   width: 20rem;
   height: 30rem;
   left: 0;
   top: 1rem;
-    background: rgba(201, 33, 69, 0.97);
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(200px);
-    z-index: -9;
- }
+  background: rgba(201, 33, 69, 0.97);
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(200px);
+  z-index: -9;
+}
 
- /* popup base (reuse your login-popup style if you want) */
+/* Popup base */
 .login-popup {
   position: fixed; inset: 0;
   background: rgba(0,0,0,.6);
@@ -220,21 +226,19 @@
 }
 .login-popup.show { display: flex; }
 
- 
-
 .login-popup-container {
   background: #000;       
   padding: 2rem;
   border-radius: 10px;
   min-width: 300px;
   max-width: 400px;
-  color: #fff;            /* white text */
+  color: #fff;
 }
 
 /* Inputs */
 .login-popup-container input {
-  background: #111;       /* dark input */
-  color: #fff;            /* white text */
+  background: #111;
+  color: #fff;
   border: 1px solid #333;
   border-radius: 5px;
   padding: 8px;
@@ -245,13 +249,12 @@
 .login-popup-title img {
   width: 25px;
   cursor: pointer;
-  filter: invert(1); /* white → black on dark bg */
+  filter: invert(1);
 }
-
 
 /* Buttons */
 .login-popup-container button {
-  background-color: #ff5722; 
+  background-color: #ff562219; 
   color: #fff;
   border: none;
   padding: 8px 15px;
@@ -260,13 +263,10 @@
   width: 100%;
 }
 
-.login-popup-title{
-  color: black;
-}
+.login-popup-title{ color: black; }
 
-/* Notes / messages */
 .login-popup-container .note {
-  color: #ffcc00; /* or red for errors */
+  color: #ffcc00;
   margin-top: 5px;
   text-align: center;
 }
@@ -292,7 +292,6 @@
   display:flex; align-items:center; justify-content:space-between;
   font-weight:700; font-size:1.1rem; margin-bottom:12px;
 }
-
 .admin-section{ margin-top: 18px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.12); }
 .admin-form{ display:flex; gap:10px; flex-direction:column; margin-top:8px; }
 .admin-form input{
@@ -302,8 +301,7 @@
 .note{ margin: 8px 0 0; font-size:.9rem; opacity:.9; }
 .warn{ margin: 8px 0 0; color:#ffb4b4; font-size:.9rem; }
 
-
-/* LOGIN PROMPT (center-bottom) */
+/* Login Prompt */
 .login-prompt {
   position: fixed;
   bottom: 40px;
@@ -327,7 +325,7 @@
 }
 .login-prompt-inner { font-weight: 500; }
 
-/* APP TOAST */
+/* App Toast */
 .app-toast {
   position: fixed;
   top: 24px;
@@ -357,86 +355,45 @@
   .fit-home-content{ padding:14px 16px; border-radius:2rem; }
 }
 
-
 /* ------------------ MOBILE STYLES ------------------ */
 @media (max-width: 768px) {
+  .fit-home-container { flex-direction: column; padding: 1rem; }
+  .fit-home-left { flex: unset; width: 100%; padding: 1rem 0.5rem; }
+  .fit-home-right { background: none; top: -25rem; }
 
-  .fit-home-container {
+  .fit-home-right .button-stack {
+    position: absolute;
+    top: 25rem;
+    right: 6.3rem;
+    display: flex;
     flex-direction: column;
-    padding: 1rem;
+    gap: 0.6rem;
+    align-items: center;
+    justify-content: flex-start;
+    z-index: 1000;
+    width: auto;
+    min-width: 6.4rem;
   }
 
-  .fit-home-left {
-    flex: unset;
-    width: 100%;
-    padding: 1rem 0.5rem;
+  .fit-home-right .button-stack .buttbtn,
+  .fit-home-right .button-stack .ad-btn {
+    position: relative !important;
+    right: auto !important;
+    top: auto !important;
+    margin: 0;
+    width: 10rem;
+    height: 2.2rem;
+    border-radius: 999px;
+    padding: 0.45rem 0.8rem;
+    box-sizing: border-box;
   }
 
-  /* Right panel becomes smaller / top buttons inline */
-  .fit-home-right {
-  background: none;
-  top: -25rem;
+  .fit-home-right .button-stack .ad-btn {
+    width: 10rem;
+    height: 2.2rem;
+    border-radius: 999px;
   }
 
-
-.fit-home-right .button-stack {
-  position: absolute;
-  top: 25rem;        /* distance from top of the red panel */
-  right: 6.3rem;      /* distance from right edge */
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  align-items: center;
-  justify-content: flex-start;
-  z-index: 1000;
-  pointer-events: auto;
-  /* optional width control so buttons align nicely */
-  width: auto;
-  min-width: 6.4rem;
-}
-
-/* Reset old absolute styles for buttons when inside the stack */
-.fit-home-right .button-stack .buttbtn,
-.fit-home-right .button-stack .ad-btn {
-  position: relative !important;
-  right: auto !important;
-  top: auto !important;
-  margin: 0;
-  width: 10rem;          /* same width for both */
-  height: 2.2rem;
-  border-radius: 999px;
-  padding: 0.45rem 0.8rem;
-  box-sizing: border-box;
-}
-
-/* Tighter spacing / visual tweak for the smaller Admin pill */
-.fit-home-right .button-stack .ad-btn {
-  width: 10rem;
-  height: 2.2rem;
-  border-radius: 999px;
-
-}
-
-/*
- .fit-home-image,
-  .fit-home-image-back {
-    display: none !important;
-    visibility: hidden;
-    pointer-events: none;
-  }
-
-  /* Big headings smaller 
-  .fit-home-tag {
-    margin-top: 3rem;
-    font-size: 1.5rem;
-    line-height: 1.5;
-    padding-top: 1rem;
-    gap: 2rem;
-  }
-*/
-
-
-  /* Hero images adjust */
   .fit-home-image {
     position: relative;
     top: 8rem;
@@ -460,54 +417,21 @@
     z-index: -2;
   }
 
-  /* Big headings smaller */
-  .fit-home-tag {
-    font-size: 1.5rem;
-    line-height: 1.2;
-    padding-top: 1rem;
-  }
+  .fit-home-tag { font-size: 1.5rem; line-height: 1.2; padding-top: 1rem; }
+  .fit-home-content { padding: 12px 16px; font-size: 0.85rem; border-radius: 1.5rem; }
 
-  /* Welcome pill smaller */
-  .fit-home-content {
-    padding: 12px 16px;
-    font-size: 0.85rem;
-    border-radius: 1.5rem;
-  }
+  .fit-home-figures { flex-direction: column; padding-top: 2rem; gap: 0.75rem; }
+  .fit-home-figures > div > span:nth-of-type(1) { font-size: 1.5rem; }
+  .fit-home-figures > div > span:nth-of-type(2) { font-size: 0.85rem; }
 
-  /* Stats smaller */
-  .fit-home-figures {
-    flex-direction: column;
-    padding-top: 2rem;
-    gap: 0.75rem;
-  }
-  .fit-home-figures > div > span:nth-of-type(1) {
-    font-size: 1.5rem;
-  }
-  .fit-home-figures > div > span:nth-of-type(2) {
-    font-size: 0.85rem;
-  }
+  .fit-home-buttons { flex-direction: column; padding-top: 2rem; gap: 0.75rem; }
+  .fit-home-buttons .btn { width: 100%; padding: 0.7rem 0; }
 
-  /* Buttons row stack */
-  .fit-home-buttons {
-    flex-direction: column;
-    padding-top: 2rem;
-    gap: 0.75rem;
-  }
-  .fit-home-buttons .btn {
-    width: 100%;
-    padding: 0.7rem 0;
-  }
-
-  /* Blur effect smaller */
   .fit-home-blur-f {
-    width: 12rem;
-    height: 18rem;
-    top: 2rem;
-    left: 50%;
-    transform: translateX(-50%);
+    width: 12rem; height: 18rem; top: 2rem;
+    left: 50%; transform: translateX(-50%);
   }
 
-  /* Login & Admin popup full width */
   .admin-popup-container {
     width: 90%;
     max-width: 350px;
@@ -517,15 +441,7 @@
 
 /* Extra small phones */
 @media (max-width: 380px) {
-  .fit-home-tag {
-    font-size: 1.2rem;
-  }
-  .fit-home-content {
-    font-size: 0.75rem;
-    padding: 10px 12px;
-  }
-  .fit-home-buttons .btn {
-    padding: 0.6rem 0;
-    font-size: 0.85rem;
-  }
+  .fit-home-tag { font-size: 1.2rem; }
+  .fit-home-content { font-size: 0.75rem; padding: 10px 12px; }
+  .fit-home-buttons .btn { padding: 0.6rem 0; font-size: 0.85rem; }
 }
