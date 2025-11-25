@@ -16,9 +16,10 @@ const ExerciseSelect = () => {
   const exercises = [
     { name: "Pushup", icon: <FaArrowUp className="ex-icon" aria-hidden />, path: "/pushup" },
     { name: "Plank", icon: <FaRunning className="ex-icon" aria-hidden />, path: "/plank" },
+     { name: "Squat", icon: <FaDumbbell className="ex-icon" aria-hidden />, path: "/squat" },
     { name: "Yoga", icon: <FaPrayingHands className="ex-icon" aria-hidden />, path: "/yoga" },
     { name: "Quiz", icon: <FaClipboardList className="ex-icon" aria-hidden />, path: "/quizstart" },
-    { name: "Squat", icon: <FaDumbbell className="ex-icon" aria-hidden />, path: "/squat" },
+   
   ];
   return (
      <>
