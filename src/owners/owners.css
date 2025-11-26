@@ -155,5 +155,16 @@
     justify-content: center;
     left: auto;
     bottom: auto;
+
+  }
+  .owners-arrows img {
+    width: 2rem;
+    height: 2rem;
+         padding: 6px;
+    border-radius: 10px;
+    background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(2px);
+    border: 1px solid rgba(255,255,255,0.15);
+    touch-action: manipulation;
   }
 }
