@@ -1,51 +1,132 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 // src/components/LeaderBoard.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Headers from "../components/header/header.jsx";
 import "./Leaderboard.css";
 
 import { db } from "../firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, collectionGroup, getDocs } from "firebase/firestore";
 
 export default function LeaderBoard() {
   const [activeTab, setActiveTab] = useState("user"); // "user" | "team"
-  const [userRank, setUserRank] = useState([]);       // [{id, name, email, points}]
-  const [teamFinal, setTeamFinal] = useState([]);     // [{id, name, description, finalScore, hasTeamPhysical}]
-  const [individualCombined, setIndividualCombined] = useState([]); // [{id,name,email,online,physical,combined,hasPhysical}]
+  const [userRank, setUserRank] = useState([]); // [{id, name, email, points}]
+  const [teamFinal, setTeamFinal] = useState([]); // [{id, name, description, finalScore, hasTeamPhysical}]
+  const [individualCombined, setIndividualCombined] = useState([]); // users NOT in any team
   const [loading, setLoading] = useState(true);
+
+  // keep admin emails in a ref (fast membership checks)
+  const adminEmailsRef = useRef(new Set());
+
+  // team details (expand on click)
+  const [expandedTeamId, setExpandedTeamId] = useState(null);
+  const [teamMembers, setTeamMembers] = useState({}); // { [teamId]: { loading, items, error? } }
+
+  // ---- helpers ----
+  const normalizeEmail = (s = "") => (s || "").trim().toLowerCase();
+  const emailToSlug = (s = "") =>
+    normalizeEmail(s).replace(/@/g, "_").replace(/\./g, "_");
+
+  const isAdminEmail = (email = "") =>
+    adminEmailsRef.current.has(normalizeEmail(email));
 
   useEffect(() => {
     (async () => {
       setLoading(true);
 
+      // ---- Load ADMIN emails (doc id or "email" field) ----
+      const adminsSnap = await getDocs(collection(db, "admins"));
+      const adminSet = new Set();
+      adminsSnap.docs.forEach((d) => {
+        const idAsEmail = normalizeEmail(d.id);
+        if (idAsEmail) adminSet.add(idAsEmail);
+        const data = (d.data && d.data()) || {};
+        const fieldEmail = normalizeEmail(data.email || "");
+        if (fieldEmail) adminSet.add(fieldEmail);
+      });
+      adminEmailsRef.current = adminSet;
+
       // ---- Load USERS (online + physical flags) ----
       const usersSnap = await getDocs(collection(db, "users"));
-      const users = usersSnap.docs.map((d) => {
-        const raw = d.data() || {};
+      const usersRaw = usersSnap.docs.map((d) => {
+        const raw = (d.data && d.data()) || {};
         const online = Number(raw.finalScore) || 0;
-        // detect if field exists (not just 0)
-        const hasPhysical = Object.prototype.hasOwnProperty.call(raw, "finalScore_admin");
+        const hasPhysical = Object.prototype.hasOwnProperty.call(
+          raw,
+          "finalScore_admin"
+        );
         const physical = Number(raw.finalScore_admin) || 0;
 
         return {
           id: d.id,
           name: raw.username || raw.name || "(No name)",
           email: raw.email || "",
+          emailKey: normalizeEmail(raw.email || ""),
           online,
           physical,
           combined: online + physical,
-          hasPhysical, // true if field present
+          hasPhysical,
         };
       });
 
-      // USER RANK (ONLINE ONLY)
+      // filter out admin accounts from any user-based listing
+      const users = usersRaw.filter((u) => !isAdminEmail(u.email));
+
+      // USER RANK (ONLINE ONLY, non-admins)
       const userRankSorted = [...users]
         .sort((a, b) => b.online - a.online)
-        .map((u) => ({ id: u.id, name: u.name, email: u.email, points: u.online }));
+        .map((u) => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          points: u.online,
+        }));
       setUserRank(userRankSorted);
 
-      // INDIVIDUAL (COMBINED)
-      const indivSorted = [...users]
+      // ---- Load TEAMS (final only + flag) ----
+      const teamsSnap = await getDocs(collection(db, "teams"));
+      const teams = teamsSnap.docs.map((t) => {
+        const td = (t.data && t.data()) || {};
+        const hasTeamPhysical = Object.prototype.hasOwnProperty.call(
+          td,
+          "finalScore"
+        );
+        return {
+          id: t.id,
+          name: td.teamName || td.name || t.id,
+          description: td.description || "",
+          finalScore: Number(td.finalScore) || 0, // ADMIN SET
+          hasTeamPhysical,
+        };
+      });
+      const teamsSorted = teams.sort((a, b) => b.finalScore - a.finalScore);
+      setTeamFinal(teamsSorted);
+
+      // ---- Get ALL team members (for "who is in a team" check) ----
+      const membersSnap = await getDocs(collectionGroup(db, "members"));
+      const memberEmailSet = new Set();
+      const memberUidSet = new Set();
+      const memberSlugIdSet = new Set();
+
+      membersSnap.docs.forEach((m) => {
+        const md = (m.data && m.data()) || {};
+        const byEmail = md.email || md.userEmail || md.memberEmail || null;
+        const byUid = md.uid || md.userId || md.userUID || null;
+
+        if (byEmail) memberEmailSet.add(normalizeEmail(byEmail));
+        if (byUid) memberUidSet.add(String(byUid));
+        if (m.id) memberSlugIdSet.add(String(m.id).toLowerCase());
+      });
+
+      // ---- INDIVIDUAL (COMBINED) — ONLY users NOT in any team (and not admins) ----
+      const indivSorted = users
+        .filter((u) => {
+          const emailKey = normalizeEmail(u.email);
+          const slugKey = emailToSlug(u.email);
+          const inTeamByEmail = memberEmailSet.has(emailKey);
+          const inTeamBySlug = memberSlugIdSet.has(slugKey);
+          const inTeamByUid = u.id && memberUidSet.has(String(u.id));
+          return !(inTeamByEmail || inTeamBySlug || inTeamByUid);
+        })
         .sort((a, b) => b.combined - a.combined)
         .map((u) => ({
           id: u.id,
@@ -58,29 +139,61 @@ export default function LeaderBoard() {
         }));
       setIndividualCombined(indivSorted);
 
-      // ---- Load TEAMS (final only + flag) ----
-      const teamsSnap = await getDocs(collection(db, "teams"));
-      const teams = teamsSnap.docs.map((t) => {
-        const td = t.data() || {};
-        // detect existence of finalScore field
-        const hasTeamPhysical = Object.prototype.hasOwnProperty.call(td, "finalScore");
-        return {
-          id: t.id,
-          name: td.teamName || td.name || t.id,
-          description: td.description || "",
-          finalScore: Number(td.finalScore) || 0, // ADMIN SET
-          hasTeamPhysical,
-        };
-      });
-      const teamsSorted = teams.sort((a, b) => b.finalScore - a.finalScore);
-      setTeamFinal(teamsSorted);
-
       setLoading(false);
     })();
   }, []);
 
+  // Load members for a given team (only once) and hide admins in the members table
+  const toggleTeam = async (teamId) => {
+    if (expandedTeamId === teamId) {
+      setExpandedTeamId(null);
+      return;
+    }
+    setExpandedTeamId(teamId);
+
+    if (teamMembers[teamId]?.items) return;
+
+    setTeamMembers((prev) => ({
+      ...prev,
+      [teamId]: { loading: true, items: [] },
+    }));
+
+    try {
+      const memSnap = await getDocs(collection(db, "teams", teamId, "members"));
+      const rows = memSnap.docs
+        .map((d) => {
+          const md = (d.data && d.data()) || {};
+          return {
+            id: d.id,
+            username: md.username || md.name || "(No name)",
+            email: md.email || md.userEmail || "",
+          };
+        })
+        // hide admins inside team members view
+        .filter((m) => !isAdminEmail(m.email));
+
+      setTeamMembers((prev) => ({
+        ...prev,
+        [teamId]: { loading: false, items: rows },
+      }));
+    } catch (e) {
+      setTeamMembers((prev) => ({
+        ...prev,
+        [teamId]: {
+          loading: false,
+          items: [],
+          error: String(e?.message || e),
+        },
+      }));
+    }
+  };
+
   // Small helper to render a status chip
-  const StatusChip = ({ ok, textIfOk, pendingText = "Waiting (admin will add)" }) => {
+  const StatusChip = ({
+    ok,
+    textIfOk,
+    pendingText = "Waiting (admin will add)",
+  }) => {
     const base = {
       display: "inline-block",
       padding: "2px 8px",
@@ -123,7 +236,7 @@ export default function LeaderBoard() {
           <div className="table-scroll">
             {loading && <div style={{ color: "#ddd", padding: 12 }}>Loading...</div>}
 
-            {/* ================= USER RANK (ONLINE ONLY) ================= */}
+            {/* USER RANK (ONLINE ONLY, admins removed) */}
             {activeTab === "user" && !loading && (
               <table className="leaderboard-table">
                 <thead>
@@ -145,46 +258,96 @@ export default function LeaderBoard() {
               </table>
             )}
 
-            {/* ================= TEAM RANK (FINAL) + INDIVIDUAL (COMBINED) ================= */}
+            {/* TEAM RANK (Final). Members list hides admins */}
             {activeTab === "team" && !loading && (
               <>
-                {/* Teams — Final (admin set) */}
-                <h3 style={{ margin: "8px 0 10px" }}>Teams — Final (Admin set)</h3>
+                <h3 style={{ margin: "8px 0 10px" , color:"white" }}>Teams </h3>
                 <table className="leaderboard-table" style={{ marginBottom: 22 }}>
                   <thead>
                     <tr>
-                      <th>Team</th>
+                      <th style={{ width: 360 }}>Team</th>
                       <th>Final Score</th>
                       <th>Physical Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {teamFinal.map((t) => (
-                      <tr key={t.id}>
-                        <td style={{ verticalAlign: "top", fontWeight: 800 }}>
-                          {t.name}
-                          {t.description && (
-                            <div
-                              style={{
-                                fontSize: 12,
-                                color: "#d0d0d0",
-                                fontWeight: 500,
-                              }}
-                            >
-                              {t.description}
-                            </div>
+                    {teamFinal.map((t) => {
+                      const isOpen = expandedTeamId === t.id;
+                      const tm = teamMembers[t.id];
+                      return (
+                        <React.Fragment key={t.id}>
+                          <tr
+                            onClick={() => toggleTeam(t.id)}
+                            style={{ cursor: "pointer" }}
+                            title="Click to view team members"
+                          >
+                            <td style={{ verticalAlign: "top", fontWeight: 800 }}>
+                              {t.name} {isOpen ? "▾" : "▸"}
+                              {t.description && (
+                                <div
+                                  style={{
+                                    fontSize: 12,
+                                    color: "#d0d0d0",
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  {t.description}
+                                </div>
+                              )}
+                            </td>
+                            <td style={{ verticalAlign: "top" }}>{t.finalScore}</td>
+                            <td style={{ verticalAlign: "top" }}>
+                              <StatusChip
+                                ok={t.hasTeamPhysical && t.finalScore > 0}
+                                textIfOk="Set"
+                                pendingText="Waiting (admin will add)"
+                              />
+                            </td>
+                          </tr>
+
+                          {isOpen && (
+                            <tr>
+                              <td colSpan={3} style={{ background: "rgba(255,255,255,0.03)" }}>
+                                <div style={{ padding: "10px 6px 6px" }}>
+                                  <div style={{ fontWeight: 700, marginBottom: 8 }}>
+                                    Team Members
+                                  </div>
+                                  {tm?.loading && (
+                                    <div style={{ color: "#bbb" }}>Loading members…</div>
+                                  )}
+                                  {tm?.error && (
+                                    <div style={{ color: "#ffb3b3" }}>
+                                      Failed to load members: {tm.error}
+                                    </div>
+                                  )}
+                                  {tm && !tm.loading && tm.items?.length === 0 && (
+                                    <div style={{ color: "#bbb" }}>No members.</div>
+                                  )}
+                                  {tm && !tm.loading && tm.items?.length > 0 && (
+                                    <table className="leaderboard-table" style={{ margin: 0 }}>
+                                      <thead>
+                                        <tr>
+                                          <th style={{ width: 220 }}>Member</th>
+                                          <th>Email</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {tm.items.map((m) => (
+                                          <tr key={m.id}>
+                                            <td>{m.username}</td>
+                                            <td>{m.email || "-"}</td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
                           )}
-                        </td>
-                        <td style={{ verticalAlign: "top" }}>{t.finalScore}</td>
-                        <td style={{ verticalAlign: "top" }}>
-                          <StatusChip
-                            ok={t.hasTeamPhysical && t.finalScore > 0}
-                            textIfOk="Set"
-                            pendingText="Waiting (admin will add)"
-                          />
-                        </td>
-                      </tr>
-                    ))}
+                        </React.Fragment>
+                      );
+                    })}
                     {teamFinal.length === 0 && (
                       <tr>
                         <td colSpan={3} style={{ color: "#ddd", padding: 12 }}>
@@ -195,9 +358,9 @@ export default function LeaderBoard() {
                   </tbody>
                 </table>
 
-                {/* Individuals — Combined (online + physical) */}
-                <h3 style={{ margin: "8px 0 10px" }}>
-                  Individual (Combined): finalScore + finalScore_admin
+                {/* Individuals — NOT in any team (admins removed) */}
+                <h3 style={{ margin: "8px 0 10px" ,color:"white"}}>
+                  Individual Participation
                 </h3>
                 <table className="leaderboard-table">
                   <thead>
@@ -205,7 +368,7 @@ export default function LeaderBoard() {
                       <th>User</th>
                       <th>Email</th>
                       <th>Online</th>
-                      <th>Physical (admin)</th>
+                      <th>Physical</th>
                       <th>Final Score</th>
                       <th>Physical Status</th>
                     </tr>
@@ -230,7 +393,7 @@ export default function LeaderBoard() {
                     {individualCombined.length === 0 && (
                       <tr>
                         <td colSpan={6} style={{ color: "#ddd", padding: 12 }}>
-                          No users found
+                          No users found (all users are in teams)
                         </td>
                       </tr>
                     )}

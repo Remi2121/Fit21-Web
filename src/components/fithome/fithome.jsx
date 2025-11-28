@@ -16,6 +16,7 @@ import {
   signInWithEmailAndPassword,
   reauthenticateWithCredential,
   EmailAuthProvider,
+  signOut, // 👈 added
 } from "firebase/auth";
 import {
   collection,
@@ -176,6 +177,33 @@ const Fithome = () => {
     // Attendance marking removed — nothing else to do here.
   };
 
+  // ✅ Proper logout
+const handleLogout = async () => {
+  try {
+    await signOut(auth);
+    setUserName("Guest");
+    setUserEmail(null);
+
+    // ✅ Show logout message
+    const toast = document.createElement("div");
+    toast.className = "logout-toast";
+    toast.textContent = "✅ You’ve been logged out successfully";
+    document.body.appendChild(toast);
+
+    // Trigger animation
+    setTimeout(() => toast.classList.add("show"), 10);
+
+    // Remove after 3 seconds
+    setTimeout(() => {
+      toast.classList.remove("show");
+      setTimeout(() => toast.remove(), 400);
+    }, 3000);
+  } catch (e) {
+    console.error(e);
+  }
+};
+
+
   return (
     <>
       <div className="fit-home-container" id="home">
@@ -204,20 +232,18 @@ const Fithome = () => {
               <span>achieve your goals!</span>
             </div>
           </div>
-
-
-
-          <div className="fit-home-buttons">
-            <button className="btn">Learn More</button>
-          </div>
         </div>
 
         <div className="fit-home-right">
+          {/* ✅ Buttons row */}
           <div className="button-stack">
-            <button className="buttbtn" onClick={() => setShowLogin(true)}>
+            <button className="cta-btn" onClick={() => setShowLogin(true)}>
               Join Now
             </button>
-            <button className="ad-btn" onClick={openAdmin}>
+            <button className="cta-btn" onClick={handleLogout}>
+              Log out
+            </button>
+            <button className="cta-btn" onClick={openAdmin}>
               Admin
             </button>
           </div>

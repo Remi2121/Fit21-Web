@@ -10,9 +10,10 @@
   position: fixed;
   top: var(--header-h, 80px);
   left: 0; right: 0; bottom: 0;
-  background:
-    radial-gradient(1200px 700px at 20% 0%, #790505 0%, transparent 60%),
-    linear-gradient(135deg, var(--bg1), var(--bg2));display: grid;
+    background:
+    radial-gradient(circle at 0% 0%, rgba(220, 38, 38, 0.25), transparent 55%),
+    radial-gradient(circle at 100% 100%, rgba(79, 3, 3, 0.69), transparent 55%),
+    #050308 ;
   place-items: center;
   padding: 18px;
   overflow: auto;
@@ -89,7 +90,7 @@
   z-index: 4;
   background: linear-gradient(90deg, var(--red1), var(--red2));
   color: #fff;
-  padding: 14px 18px;
+  padding: 14px 15px;
   font-weight: 800;
   text-align: left;
   border-radius: 8px;
@@ -249,5 +250,6 @@
     min-width: 160px !important;
     padding: 10px 22px !important;
     border-radius: 28px !important;
+    cursor: pointer !important;
   }
 }

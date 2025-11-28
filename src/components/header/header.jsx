@@ -186,7 +186,7 @@ const Header = () => {
             We would love to hear from you! Feel free to reach out for any inquiries or feedback.
           </p>
           <ul className="contact-popup-info">
-            <li><strong>Club-</strong> Fit21</li>
+            <li><strong>Club-</strong> nexus</li>
             <li><strong>Preferred reply time:</strong> within 24 hours</li>
           </ul>
 

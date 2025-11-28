@@ -15,6 +15,8 @@ import Squat from "./Exercise/Scott/squat.jsx"
 import Attendance from "./Attendance/Attendance.jsx";
 
 
+
+
 function App() {
   return (
     <div className="App">
