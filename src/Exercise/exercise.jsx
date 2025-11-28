@@ -27,7 +27,10 @@ const ExerciseSelect = () => {
     <div className="exercise-container">
       <div className="glass-card">
         <h2 className="stoke-text">Select Your Exercise for Today</h2>
-
+        <span className="exercise-subtitle">
+           Dress in fit wears to accurately perform the exercise
+          <br />
+        </span>
         <div className="exercise-list">
           {exercises.map((item, i) => (
             <Link to={item.path} key={i} className="exercise-row">

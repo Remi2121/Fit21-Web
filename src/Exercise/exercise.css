@@ -26,13 +26,25 @@
   font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
   color: var(--text);
   background:
-    radial-gradient(1200px 700px at 20% 0%, #5a0909 0%, transparent 60%),
-    linear-gradient(135deg, var(--bg1), var(--bg2));
+    radial-gradient(circle at 0% 0%, rgba(220, 38, 38, 0.25), transparent 55%),
+    radial-gradient(circle at 100% 100%, rgba(79, 3, 3, 0.69), transparent 55%),
+    #050308 ;
   padding: 24px clamp(16px, 3vw, 32px) clamp(16px, 3vw, 32px);
   overflow: hidden;
   z-index: 0;
 }
 
+
+.exercise-subtitle{
+  font-size: clamp(20px, 1.2vw, 18px);
+  color: rgba(255, 255, 255, 0.995);
+  margin-top: 8px;
+  margin-bottom: 8px;
+  text-align: center;
+  line-height: 1.4;
+  font-weight: 500;
+  letter-spacing: .5px;
+}
 /* ===== GLASS CARD ===== */
 .glass-card{
   width: min(720px, 92vw);

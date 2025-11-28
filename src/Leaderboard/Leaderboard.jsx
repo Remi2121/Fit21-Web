@@ -261,7 +261,7 @@ export default function LeaderBoard() {
             {/* TEAM RANK (Final). Members list hides admins */}
             {activeTab === "team" && !loading && (
               <>
-                <h3 style={{ margin: "8px 0 10px" , color:"white" }}>Teams — Final (Admin set)</h3>
+                <h3 style={{ margin: "8px 0 10px" , color:"white" }}>Teams </h3>
                 <table className="leaderboard-table" style={{ marginBottom: 22 }}>
                   <thead>
                     <tr>
@@ -360,7 +360,7 @@ export default function LeaderBoard() {
 
                 {/* Individuals — NOT in any team (admins removed) */}
                 <h3 style={{ margin: "8px 0 10px" ,color:"white"}}>
-                  Individual (Not in any team): 
+                  Individual Participation
                 </h3>
                 <table className="leaderboard-table">
                   <thead>
@@ -368,7 +368,7 @@ export default function LeaderBoard() {
                       <th>User</th>
                       <th>Email</th>
                       <th>Online</th>
-                      <th>Physical (admin)</th>
+                      <th>Physical</th>
                       <th>Final Score</th>
                       <th>Physical Status</th>
                     </tr>

@@ -7,7 +7,7 @@
 /* ===== Container ===== */
 .Footer-container {
   position: relative;
-   background:rgb(43, 1, 1);
+   background: rgb(34, 1, 1);
   mix-blend-mode: overlay;
   padding-bottom: 2rem;
 }

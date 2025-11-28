@@ -4,10 +4,11 @@
   flex-wrap: wrap;
   padding: 3rem 2rem;
   gap: 6rem;
-  background: rgb(43, 1, 1);
+  background: rgb(34, 1, 1);
   mix-blend-mode: normal;
   position: relative;
   isolation: isolate;
+  height: auto;
 }
 
 /* ---------- Left Section ---------- */
@@ -79,7 +80,7 @@
 }
 .right-c.show {
   max-height: 1200px;
-  top: -12rem;
+  top: 1rem;
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
@@ -146,6 +147,13 @@
   .btn-contact-toggle--mobile { display: inline-flex; width: 100%; } /* show mobile button */
   .right-c { align-items: stretch; gap: 0.2rem; }
   .contact-form { width: 100%; max-width: none; padding: 1rem; margin-top: 0; }
+  .right-c.show {
+  max-height: 1200px;
+  top: -10rem;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
 }
 
 @media (max-width: 520px) {
