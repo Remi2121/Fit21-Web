@@ -57,10 +57,10 @@ const Header = () => {
     e.preventDefault();
     try {
       await emailjs.sendForm(
-        "service_dfb7bwm",
-        "template_3dickjd",
+        "service_t34ug6o",
+        "template_6ott38d",
         formRef.current,
-        { publicKey: "1O9eu4fEcwq4DNk3F" }
+        { publicKey: "IJVjw7RfNmjYQUfCr" }
       );
       alert("Message sent!");
       e.target.reset();
