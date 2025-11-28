@@ -27,8 +27,9 @@
   padding-top: 2rem;
   padding-bottom: 2rem;
   background:
-    radial-gradient(1200px 700px at 20% 0%, #790505 0%, transparent 60%),
-    linear-gradient(135deg, var(--bg1), var(--bg2));
+    radial-gradient(circle at 0% 0%, rgba(220, 38, 38, 0.25), transparent 55%),
+    radial-gradient(circle at 100% 100%, rgba(79, 3, 3, 0.69), transparent 55%),
+    #050308 ;
   color: white;
   font-family: "Poppins", sans-serif;
   box-sizing: border-box;

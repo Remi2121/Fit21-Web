@@ -29,7 +29,7 @@ const Fooder = () => {
         {/* Right: Social (icon version) */}
         <nav className="social-links" aria-label="social links">
           <a
-            href="https://www.facebook.com"
+            href="https://www.facebook.com/people/Nexus-Club-USJ/61567209233227/?rdid=tPuwWWviXu4gqnkt&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F1G9D5TwSqS%2F"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Facebook"
@@ -38,7 +38,7 @@ const Fooder = () => {
             <Facebook size={22} strokeWidth={2} />
           </a>
           <a
-            href="https://www.instagram.com/dhano_r.k.r/"
+            href="https://www.instagram.com/nexus_club_usj"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Instagram"

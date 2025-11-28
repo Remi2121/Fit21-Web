@@ -72,7 +72,7 @@ useEffect(() => {
       <div className="owners">
         <div className="left-o">
           <span>Team Members</span>
-          <span className="stoke-text">Cruew Members</span>
+          <span className="stoke-text">Crew Members</span>
           <span>Loading…</span>
         </div>
       </div>
