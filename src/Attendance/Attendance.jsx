@@ -175,7 +175,7 @@ const Attendance = () => {
 
             <div className="attendance-table-wrap centered black-brown">
               {tableRows.length === 0 && !loadingTable ? (
-                <p className="no-records">No attendance records yet. Admin will add attendance from admin panel or Firebase Console.</p>
+                <p className="no-records">No attendance records yet.</p>
               ) : (
                 <table className="attendance-table three-d" aria-describedby="attendance-list">
                   <thead>
