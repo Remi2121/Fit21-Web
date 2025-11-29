@@ -8,7 +8,7 @@ import {
   deleteQuiz,
   publishAllForDay,
   deleteAllForDay,
-} from "../services/quizService"; // path correct nu check pannunga
+} from "../services/quizService";
 
 // Firestore helpers
 import {
@@ -20,7 +20,7 @@ import {
   writeBatch,
   setDoc,
 } from "firebase/firestore";
-import { db } from "../services/firebase"; // adjust if needed
+import { db } from "../services/firebase";
 
 export default function QuizSection() {
   const [quizzes, setQuizzes] = useState([]);
@@ -46,8 +46,8 @@ export default function QuizSection() {
     timeLimitMinutes: 10,
   });
 
-  // Cache of saved per-day settings: { [dayNumber]: { maxPoints, timeLimitMinutes } }
-  const [daySettingsMap, setDaySettingsMap] = useState({}); // e.g., {1: {maxPoints:20, timeLimitMinutes:10}}
+  // Cache of saved per-day settings
+  const [daySettingsMap, setDaySettingsMap] = useState({});
 
   // Existing timer used in summary for published questions (you can keep/change)
   const TIME_PER_QUESTION_SEC = 90;
@@ -82,8 +82,7 @@ export default function QuizSection() {
         const v = d.data();
         if (typeof v?.day === "number") {
           map[v.day] = {
-            maxPoints:
-              typeof v?.maxPoints === "number" ? v.maxPoints : 20,
+            maxPoints: typeof v?.maxPoints === "number" ? v.maxPoints : 20,
             timeLimitMinutes:
               typeof v?.timeLimitMinutes === "number"
                 ? v.timeLimitMinutes
@@ -101,6 +100,36 @@ export default function QuizSection() {
     loadQuizzes();
     loadDaySettings();
   }, []);
+
+  // --- helpers ---
+
+  // check if any quiz exists for EXACT day
+  // eslint-disable-next-line no-unused-vars
+  async function hasAnyForDay(dayNumber) {
+    const qRef = query(
+      collection(db, "quizQuestions"),
+      where("day", "==", Number(dayNumber))
+    );
+    const snap = await getDocs(qRef);
+    return snap.size > 0;
+  }
+
+  // check if any quiz exists for ANY day < given day
+  async function hasAnyBeforeDay(dayNumber) {
+    if (Number(dayNumber) <= 1) return false;
+    const qRef = query(
+      collection(db, "quizQuestions"),
+      where("day", "<", Number(dayNumber))
+    );
+    const snap = await getDocs(qRef);
+    return snap.size > 0;
+  }
+
+  // get smallest day that currently exists (for UX hints)
+  function getMinExistingDayLocal() {
+    if (!quizzes || quizzes.length === 0) return null;
+    return Math.min(...quizzes.map((q) => Number(q.day) || 0));
+  }
 
   // ---------- FORM HANDLERS ----------
   function handleChange(e) {
@@ -137,8 +166,24 @@ export default function QuizSection() {
       correctOption: form.correctOption || "A",
     };
 
+    if (!quizData.day || quizData.day < 1 || quizData.day > 21) {
+      setError("Please enter a valid day (1–21).");
+      return;
+    }
+
     try {
       setError("");
+
+      // ==== NEW GLOBAL RULE ====
+      // For any Day D (>1), block adding if ANY previous day (<D) still has quizzes.
+      // Applies on "create". Also applies on "edit" if user changes the day to a later one.
+      const prevExists = await hasAnyBeforeDay(quizData.day);
+      if (prevExists) {
+        setError(
+          `Cannot add/edit for Day ${quizData.day}. Please delete all quizzes from earlier days (< ${quizData.day}) first.`
+        );
+        return;
+      }
 
       if (editingId) {
         await updateQuiz(editingId, quizData);
@@ -298,8 +343,7 @@ export default function QuizSection() {
         maxPoints: 20,
         timeLimitMinutes: 10,
       };
-      const perQuestion =
-        totalCount > 0 ? settings.maxPoints / totalCount : 0;
+      const perQuestion = totalCount > 0 ? settings.maxPoints / totalCount : 0;
 
       const batch = writeBatch(db);
       snap.forEach((d) => {
@@ -310,7 +354,6 @@ export default function QuizSection() {
         });
       });
       await batch.commit();
-      // console.log(`Day ${day}: perQ=${perQuestion}, time=${settings.timeLimitMinutes}m`);
     } catch (err) {
       console.error("Error updating quizzes for day:", err);
     }
@@ -329,6 +372,9 @@ export default function QuizSection() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quizzes, daySettingsMap]);
+
+  // derived for UX hint
+  const minExistingDay = getMinExistingDayLocal();
 
   // ---------- UI ----------
   return (
@@ -398,7 +444,9 @@ export default function QuizSection() {
         </div>
 
         <div style={{ gridColumn: "span 2 / span 2" }}>
-          <label style={{ fontSize: "0.85rem" }}>Maximum Points (for this day)</label>
+          <label style={{ fontSize: "0.85rem" }}>
+            Maximum Points (for this day)
+          </label>
           <input
             type="number"
             step="1"
@@ -424,7 +472,9 @@ export default function QuizSection() {
         </div>
 
         <div style={{ gridColumn: "span 2 / span 2" }}>
-          <label style={{ fontSize: "0.85rem" }}>Time Limit (minutes, this day)</label>
+          <label style={{ fontSize: "0.85rem" }}>
+            Time Limit (minutes, this day)
+          </label>
           <input
             type="number"
             step="1"
@@ -463,13 +513,13 @@ export default function QuizSection() {
               width: "100%",
             }}
           >
-            Save Day Settings 
+            Save Day Settings
           </button>
           <div style={{ marginTop: "0.55rem", fontSize: "0.55rem", color: "#bbb" }}>
             Saved for Day {daySettingsInput.day}:{" "}
             Max {daySettingsMap[daySettingsInput.day]?.maxPoints ?? 20},{" "}
-            Time {daySettingsMap[daySettingsInput.day]?.timeLimitMinutes ?? 10} min
-            {" "} (defaults shown if not set)
+            Time {daySettingsMap[daySettingsInput.day]?.timeLimitMinutes ?? 10}{" "}
+            min (defaults shown if not set)
           </div>
         </div>
       </form>
@@ -507,6 +557,12 @@ export default function QuizSection() {
               value={form.day}
               onChange={handleChange}
               placeholder="1"
+              // UX: if there is any earlier day present, prevent choosing a later day visually
+              title={
+                Number(form.day) > 1 && minExistingDay !== null
+                  ? "You must delete all earlier days before adding this day"
+                  : ""
+              }
               style={{
                 width: "100%",
                 marginTop: "0.25rem",
@@ -517,6 +573,17 @@ export default function QuizSection() {
                 color: "#fff",
               }}
             />
+            {Number(form.day) > 1 && minExistingDay !== null && (
+              <div
+                style={{
+                  color: "#fca5a5",
+                  fontSize: "0.8rem",
+                  marginTop: "0.25rem",
+                }}
+              >
+                Clear all quizzes from earlier days before adding Day {form.day}.
+              </div>
+            )}
           </div>
 
           <div style={{ gridColumn: "span 3 / span 3" }}>
@@ -790,7 +857,7 @@ export default function QuizSection() {
           </tbody>
         </table>
 
-        {/* Day-wise bulk actions: publish all / delete all */}
+        {/* Day-wise bulk actions */}
         {quizzes.length > 0 && (
           <div
             style={{
@@ -839,7 +906,7 @@ export default function QuizSection() {
           </div>
         )}
 
-        {/* Day-wise stats: published count → timer + points + saved time limit */}
+        {/* Day-wise stats */}
         {quizzes.length > 0 && (
           <div
             style={{
@@ -858,13 +925,11 @@ export default function QuizSection() {
               .sort((a, b) => a - b)
               .map((day) => {
                 const dayQuizzes = quizzes.filter((q) => q.day === day);
-                const publishedCount = dayQuizzes.filter(
-                  (q) => q.published
-                ).length;
+                const publishedCount = dayQuizzes.filter((q) => q.published)
+                  .length;
                 const totalCount = dayQuizzes.length;
 
-                const totalSeconds =
-                  publishedCount * TIME_PER_QUESTION_SEC;
+                const totalSeconds = publishedCount * TIME_PER_QUESTION_SEC;
                 const minutes = Math.floor(totalSeconds / 60);
                 const seconds = totalSeconds % 60;
 
@@ -877,13 +942,11 @@ export default function QuizSection() {
 
                 return (
                   <div key={day}>
-                    Day {day}: {publishedCount}/{totalCount} published →{" "}
-                    {minutes} min{" "}
-                    {seconds.toString().padStart(2, "0")} sec |{" "}
-                    Max {settings.maxPoints} → 1 Q = {perQuestion} points |{" "}
-                    Time limit saved: {settings.timeLimitMinutes} min
-                    {" "}(stored in each quiz as <code>timeLimitMinutes</code> and
-                    {" "}
+                    Day {day}: {publishedCount}/{totalCount} published → {minutes}{" "}
+                    min {seconds.toString().padStart(2, "0")} sec | Max{" "}
+                    {settings.maxPoints} → 1 Q = {perQuestion} points | Time
+                    limit saved: {settings.timeLimitMinutes} min{" "}
+                    (stored in each quiz as <code>timeLimitMinutes</code> and{" "}
                     <code>ponits_for_this_question</code>)
                   </div>
                 );
