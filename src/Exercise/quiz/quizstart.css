@@ -25,9 +25,9 @@
   position: fixed;            /* stick to viewport while scrolling */
   inset: 0;                   /* top:0; right:0; bottom:0; left:0 */
   z-index: -1;                /* behind your content */
-  background:
-    radial-gradient(circle at 30% 10%, rgba(255,0,0,0.22), transparent 65%),
-    linear-gradient(180deg, #000 0%, #330000 45%, #b300006d 100%);
+  /* same background as your other screens */
+  background: radial-gradient(1200px 700px at 20% 0%, #2f0303 0%, transparent 60%),
+              linear-gradient(135deg, #242425, #21050a);
   background-attachment: fixed;
   background-repeat: no-repeat;
   background-size: cover;
