@@ -1,7 +1,7 @@
 /* === PushUp page full-screen + layout === */
 .plank-container {
   box-sizing: border-box;
-  min-height: 100vh;                /* full viewport height */
+  min-height: auto;                /* full viewport height */
   display: flex;
   flex-direction: column;
   align-items: center;
