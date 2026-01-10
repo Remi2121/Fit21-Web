@@ -25,3 +25,4 @@ dist/
 .firebase/
 firebase.json
 public/favicon.png
+.firebaserc
