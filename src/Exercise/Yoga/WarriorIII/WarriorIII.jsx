@@ -2,10 +2,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./WarriorIII.css";
 
-// reference image
 import warriorImg from "../../../assets/warrior3-ref.png";
 
-// Mediapipe
 import {
   PoseLandmarker,
   FilesetResolver,
@@ -17,21 +15,22 @@ export default function WarriorIII({ holdMs = 2000, badResetMs = 3000 }) {
   const canvasRef = useRef(null);
   const landmarkerRef = useRef(null);
 
-  // UI state
   const [status, setStatus] = useState("loading…");
   const [sideUsed, setSideUsed] = useState("—");
-  const [poseGood, setPoseGood] = useState(false);   // 🔴 / 🟢 glow control
+  const [poseGood, setPoseGood] = useState(false);
   const [showDone, setShowDone] = useState(false);
 
-  const greenSinceRef = useRef(null);
-  const badSinceRef = useRef(null);
+  const greenSinceRef = useRef(null); // streak start time
+  const badSinceRef = useRef(null);   // when streak started to get bad
   const stoppedRef = useRef(false);
 
-  const [, force] = useState(0); // timer UI repaint
+  const [, force] = useState(0);
   const lastTsRef = useRef(0);
   const loopStartedRef = useRef(false);
 
-  // anti-flicker buffer
+  const [progressSec, setProgressSec] = useState("0.0");
+
+  // anti-flicker for green border only
   const passBuf = useRef(Array(8).fill(false));
   const passIdx = useRef(0);
 
@@ -132,15 +131,18 @@ export default function WarriorIII({ holdMs = 2000, badResetMs = 3000 }) {
         return;
       }
 
-      if (ts - lastFrameTs > 33) {
+      if (ts - lastFrameTs > 80) {
         if (v.readyState >= 2) {
-          let nowMs = Math.round(performance.now());
+          let nowMs =
+            typeof performance !== "undefined"
+              ? performance.now()
+              : Date.now();
           if (nowMs <= lastTsRef.current) nowMs = lastTsRef.current + 1;
           lastTsRef.current = nowMs;
 
           lm.detectForVideo(v, nowMs, (results) => {
             draw(results);
-            process(results);
+            process(results, nowMs);
           });
 
           force((x) => x ^ 1);
@@ -168,10 +170,9 @@ export default function WarriorIII({ holdMs = 2000, badResetMs = 3000 }) {
         utils.drawConnectors(
           results.landmarks[0],
           PoseLandmarker.POSE_CONNECTIONS,
-          { color: "#333", lineWidth: 2 }
+          { lineWidth: 2 }
         );
         utils.drawLandmarks(results.landmarks[0], {
-           color: "#ff3333",
           radius: 2,
         });
       }
@@ -179,64 +180,57 @@ export default function WarriorIII({ holdMs = 2000, badResetMs = 3000 }) {
       ctx.restore();
     }
 
-    function process(results) {
+    function process(results, now) {
       const c = canvasRef.current,
         W = c.width,
         H = c.height;
 
-      if (!results.landmarks || !results.landmarks[0]) {
+      let pass = false; // will be set true if pose ok
+
+      const hasLm = !!(results.landmarks && results.landmarks[0]);
+
+      if (!hasLm) {
         setSideUsed("—");
-        setPoseGood(false);
-        badSinceRef.current = badSinceRef.current ?? performance.now();
-        const now = performance.now();
-        if (
-          greenSinceRef.current &&
-          now - (badSinceRef.current || now) > badResetMs
-        ) {
-          greenSinceRef.current = null;
-        }
-        setStatus("pose not detected");
-        return;
+        // no angles, just treat as bad frame for timer / border
+      } else {
+        const lm = results.landmarks[0];
+        const side = chooseSide(lm, W, H);
+        setSideUsed(side);
+
+        const SH = side === "left" ? lm[11] : lm[12];
+        const HIP = side === "left" ? lm[23] : lm[24];
+        const KNEE = side === "left" ? lm[25] : lm[26];
+        const ANK = side === "left" ? lm[27] : lm[28];
+        const WR_FWD = side === "left" ? lm[15] : lm[16];
+        const ANK_BACK = side === "left" ? lm[28] : lm[27];
+
+        // ====== ANGLE CHECKS (lenient) ======
+        const dxTorso = (SH.x - HIP.x) * W;
+        const dyTorso = (SH.y - HIP.y) * H;
+        const torsoAngle =
+          (Math.atan2(dyTorso, dxTorso) * 180) / Math.PI;
+        const torsoHorizontal = Math.abs(torsoAngle) < 55;
+
+        const kneeAngle = angleDeg(HIP, KNEE, ANK);
+        const legStraight = kneeAngle >= 130;
+
+        const backLegDy = (ANK_BACK.y - HIP.y) * H;
+        const backLegLifted = backLegDy < 180;
+
+        const dxArm = (WR_FWD.x - SH.x) * W;
+        const dyArm = (WR_FWD.y - SH.y) * H;
+        const armAngle =
+          (Math.atan2(dyArm, dxArm) * 180) / Math.PI;
+        const armsInline = Math.abs(armAngle - torsoAngle) < 40;
+
+        pass =
+          torsoHorizontal &&
+          legStraight &&
+          backLegLifted &&
+          armsInline;
       }
 
-      const lm = results.landmarks[0];
-      const side = chooseSide(lm, W, H);
-      setSideUsed(side);
-
-      const SH = side === "left" ? lm[11] : lm[12];
-      const HIP = side === "left" ? lm[23] : lm[24];
-      const KNEE = side === "left" ? lm[25] : lm[26];
-      const ANK = side === "left" ? lm[27] : lm[28];
-      const WR_FWD = side === "left" ? lm[15] : lm[16]; // front arm
-      const ANK_BACK = side === "left" ? lm[28] : lm[27]; // rough back leg
-
-      // --- Simple Warrior III checks (tune if needed) ---
-
-      // torso roughly horizontal
-      const dxTorso = (SH.x - HIP.x) * W;
-      const dyTorso = (SH.y - HIP.y) * H;
-      const torsoAngle = (Math.atan2(dyTorso, dxTorso) * 180) / Math.PI;
-      const torsoHorizontal = Math.abs(torsoAngle) < 25; // ~flat
-
-      // standing leg fairly straight
-      const kneeAngle = angleDeg(HIP, KNEE, ANK);
-      const legStraight = kneeAngle >= 15;
-
-      // back leg lifted: ankle roughly level with hip
-      const backLegLifted =
-        Math.abs(ANK_BACK.y * H - HIP.y * H) < 80 &&
-        ANK_BACK.y * H <= HIP.y * H + 60;
-
-      // arms inline with torso (shoulder-wrist angle close to torsoAngle)
-      const dxArm = (WR_FWD.x - SH.x) * W;
-      const dyArm = (WR_FWD.y - SH.y) * H;
-      const armAngle = (Math.atan2(dyArm, dxArm) * 180) / Math.PI;
-      const armsInline = Math.abs(armAngle - torsoAngle) < 25;
-
-      const pass =
-        torsoHorizontal && legStraight && backLegLifted && armsInline;
-
-      // anti-flicker buffer
+      // ====== BORDER (anti-flicker) ======
       passBuf.current[passIdx.current] = pass;
       passIdx.current =
         (passIdx.current + 1) % passBuf.current.length;
@@ -245,42 +239,53 @@ export default function WarriorIII({ holdMs = 2000, badResetMs = 3000 }) {
         0
       );
       const finalGood = goodFrames >= 4;
-
       setPoseGood(finalGood);
-      setStatus(finalGood ? "holding pose" : "adjust pose");
 
-      const now = performance.now();
-
-      if (finalGood) {
+      // ====== TIMER (based on pass only) ======
+      if (pass) {
+        // good frame → streak starts / continues
         if (!greenSinceRef.current) greenSinceRef.current = now;
         badSinceRef.current = null;
-
-        if (
-          !stoppedRef.current &&
-          now - greenSinceRef.current >= holdMs
-        ) {
-          stoppedRef.current = true;
-          setShowDone(true);
-          setStatus("completed");
-
-          const v = videoRef.current;
-          if (v?.srcObject) {
-            v.srcObject.getTracks().forEach((t) => t.stop());
-            v.srcObject = null;
-          }
-          try {
-            landmarkerRef.current?.close?.();
-          } catch (e) {}
-          landmarkerRef.current = null;
-        }
       } else {
+        // bad frame → only after badResetMs reset
         if (!badSinceRef.current) badSinceRef.current = now;
         if (
           greenSinceRef.current &&
           now - badSinceRef.current > badResetMs
         ) {
           greenSinceRef.current = null;
+          setProgressSec("0.0");
         }
+      }
+
+      const heldMs = greenSinceRef.current
+        ? now - greenSinceRef.current
+        : 0;
+
+      if (greenSinceRef.current) {
+        const sec = Math.max(0, heldMs / 1000).toFixed(1);
+        setProgressSec(sec);
+        setStatus(
+          `holding pose (${sec}s / ${(holdMs / 1000) | 0}s)`
+        );
+      } else {
+        setStatus(hasLm ? "adjust pose" : "pose not detected");
+      }
+
+      if (!stoppedRef.current && greenSinceRef.current && heldMs >= holdMs) {
+        stoppedRef.current = true;
+        setShowDone(true);
+        setStatus("completed");
+
+        const v = videoRef.current;
+        if (v?.srcObject) {
+          v.srcObject.getTracks().forEach((t) => t.stop());
+          v.srcObject = null;
+        }
+        try {
+          landmarkerRef.current?.close?.();
+        } catch (e) {}
+        landmarkerRef.current = null;
       }
     }
 
@@ -294,20 +299,12 @@ export default function WarriorIII({ holdMs = 2000, badResetMs = 3000 }) {
 
       const v = videoRef.current;
       if (v?.srcObject) v.srcObject.getTracks().forEach((t) => t.stop());
-
       try {
         landmarkerRef.current?.close?.();
       } catch (e) {}
       landmarkerRef.current = null;
     };
   }, [badResetMs, holdMs]);
-
-  const progressSec = greenSinceRef.current
-    ? Math.max(
-        0,
-        (performance.now() - greenSinceRef.current) / 1000
-      ).toFixed(1)
-    : "0.0";
 
   return (
     <div className="war3-container">
@@ -327,7 +324,7 @@ export default function WarriorIII({ holdMs = 2000, badResetMs = 3000 }) {
       <div className="war3-stage">
         <canvas
           ref={canvasRef}
-          className={`war3-canvas ${poseGood ? "good" : "bad"}`} // 🔴 / 🟢
+          className={`war3-canvas ${poseGood ? "good" : "bad"}`}
           width={640}
           height={480}
         />
@@ -336,7 +333,6 @@ export default function WarriorIII({ holdMs = 2000, badResetMs = 3000 }) {
           <span className="war3-tip-plain">
             Stand in a proper side view facing the camera.
           </span>
-
           <img
             src={warriorImg}
             className="war3-pose-img"
@@ -345,7 +341,6 @@ export default function WarriorIII({ holdMs = 2000, badResetMs = 3000 }) {
           />
         </div>
       </div>
-
 
       <div className="war3-status">
         <span>Side: {sideUsed}</span>
@@ -358,8 +353,8 @@ export default function WarriorIII({ holdMs = 2000, badResetMs = 3000 }) {
       </div>
 
       <p className="war3-note">
-        Keep torso horizontal (~90° to standing leg), standing leg
-        straight, back leg lifted, arms roughly inline with torso.
+        Keep torso roughly horizontal, standing leg fairly straight, back
+        leg lifted, arms roughly inline with torso. Small variations are OK.
       </p>
 
       {showDone && (

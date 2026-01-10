@@ -7,19 +7,24 @@ import CommitteeSection from "./components/CommitteeSection.jsx";
 import QuizSection from "./components/QuizSection.jsx";
 import AnnouncementSection from "./components/AnnouncementSection.jsx";
 import LeaderboardSection from "./components/LeaderboardSection.jsx";
-//import Card from "./components/Card.jsx";
-import TeamSection from "./components/TeamSection.jsx"; // <-- NEW
+import TeamSection from "./components/TeamSection.jsx";
 import Rules from "./components/Rules/Rules.jsx";
 import Attendance from "./components/Attendance/Attendance.jsx";
 import AchievementSection from "./components/Achievement/Achievement.jsx";
 
+// 🔥 Firestore imports for dashboard counts
+import { db } from "../firebase";
+import { collection, getDocs } from "firebase/firestore";
 
+// small helper – count docs in a collection
+async function getCollectionCount(colName) {
+  const snap = await getDocs(collection(db, colName));
+  return snap.size;
+}
 
 export default function AdminDashboard() {
-  // ===== STATE =====
-
+  // ===== FIREBASE TEST (OPTIONAL) =====
   useEffect(() => {
-    // page load aana udane oru dhadava test pannum
     async function runTest() {
       try {
         const count = await testFirebase();
@@ -30,10 +35,12 @@ export default function AdminDashboard() {
         console.error("❌ Firebase test FAILED:", err);
       }
     }
-
     runTest();
-  }, []); // empty dependency -> once on mount
+  }, []);
 
+  // ===== STATE =====
+
+  // Organizing committee – used inside CommitteeSection UI
   const [committee, setCommittee] = useState([
     {
       id: 1,
@@ -60,10 +67,9 @@ export default function AdminDashboard() {
       photoUrl: "https://via.placeholder.com/80",
     },
   ]);
-
   const [selectedMember, setSelectedMember] = useState(null);
 
-  // Quiz data
+  // Quiz state – used by QuizSection UI (Firestore sync happens there)
   const [quizList, setQuizList] = useState([
     {
       id: 1,
@@ -98,30 +104,7 @@ export default function AdminDashboard() {
   const [newQuiz, setNewQuiz] = useState(emptyQuiz);
   const [editingQuizId, setEditingQuizId] = useState(null); // null = create mode
 
-  // Announcements data
-  const [announcements, setAnnouncements] = useState([
-    {
-      id: 1,
-      day: 1,
-      title: "Day 1 Start",
-      message: "Fit21 starts at 6.30 PM today.",
-    },
-    {
-      id: 2,
-      day: 2,
-      title: "Warm Up",
-      message: "Please arrive 15 mins early for warm up.",
-    },
-  ]);
-
-  const emptyAnnouncement = { day: "", title: "", message: "" };
-
-  const [newAnnouncement, setNewAnnouncement] =
-    useState(emptyAnnouncement);
-  const [editingAnnouncementId, setEditingAnnouncementId] =
-    useState(null);
-
-  // Leaderboard data – start with no rank (auto rank only when day 21)
+  // Leaderboard data – only for UI (real points in Firestore)
   const [leaderboard, setLeaderboard] = useState([
     { id: 1, rank: null, name: "User A", daysCompleted: 15, points: 150 },
     { id: 2, rank: null, name: "User B", daysCompleted: 12, points: 120 },
@@ -142,7 +125,7 @@ export default function AdminDashboard() {
     return () => clearInterval(id);
   }, []);
 
-  // ===== QUIZ HANDLERS =====
+  // ===== QUIZ HANDLERS (local for QuizSection) =====
 
   const resetQuizForm = () => {
     setNewQuiz(emptyQuiz);
@@ -189,7 +172,7 @@ export default function AdminDashboard() {
         published: false,
         expiresAt: null,
       };
-      setQuizList([...quizList, newItem]);
+      setQuizList((prev) => [...prev, newItem]);
     }
 
     resetQuizForm();
@@ -234,62 +217,6 @@ export default function AdminDashboard() {
     );
   };
 
-  // ===== ANNOUNCEMENT HANDLERS =====
-
-  const resetAnnouncementForm = () => {
-    setNewAnnouncement(emptyAnnouncement);
-    setEditingAnnouncementId(null);
-  };
-
-  const handleAnnouncementSubmit = (e) => {
-    e.preventDefault();
-    if (!newAnnouncement.day || !newAnnouncement.title) return;
-
-    if (editingAnnouncementId) {
-      // update
-      setAnnouncements(
-        announcements.map((a) =>
-          a.id === editingAnnouncementId
-            ? {
-                ...a,
-                day: Number(newAnnouncement.day),
-                title: newAnnouncement.title,
-                message: newAnnouncement.message,
-              }
-            : a
-        )
-      );
-    } else {
-      // create
-      const item = {
-        id: Date.now(),
-        day: Number(newAnnouncement.day),
-        title: newAnnouncement.title,
-        message: newAnnouncement.message,
-      };
-      setAnnouncements([...announcements, item]);
-    }
-
-    resetAnnouncementForm();
-  };
-
-  const handleEditAnnouncement = (a) => {
-    setActiveTab("announcements");
-    setEditingAnnouncementId(a.id);
-    setNewAnnouncement({
-      day: String(a.day),
-      title: a.title,
-      message: a.message,
-    });
-  };
-
-  const handleDeleteAnnouncement = (id) => {
-    setAnnouncements(announcements.filter((a) => a.id !== id));
-    if (editingAnnouncementId === id) {
-      resetAnnouncementForm();
-    }
-  };
-
   // ===== RENDER =====
 
   return (
@@ -309,6 +236,7 @@ export default function AdminDashboard() {
         >
           Dashboard
         </button>
+
         <button
           onClick={() => setActiveTab("committee")}
           className={`admin-nav-button ${
@@ -317,6 +245,7 @@ export default function AdminDashboard() {
         >
           Organizing Team
         </button>
+
         <button
           onClick={() => setActiveTab("quiz")}
           className={`admin-nav-button ${
@@ -325,6 +254,7 @@ export default function AdminDashboard() {
         >
           Quiz Management
         </button>
+
         <button
           onClick={() => setActiveTab("announcements")}
           className={`admin-nav-button ${
@@ -335,11 +265,13 @@ export default function AdminDashboard() {
         </button>
 
         <button
-         onClick={() => setActiveTab("attendance")}
-         className={`admin-nav-button ${activeTab === "attendance" ? "active" : ""}`}
-         >
-           Attendance
-         </button>
+          onClick={() => setActiveTab("attendance")}
+          className={`admin-nav-button ${
+            activeTab === "attendance" ? "active" : ""
+          }`}
+        >
+          Attendance
+        </button>
 
         <button
           onClick={() => setActiveTab("leaderboard")}
@@ -350,30 +282,32 @@ export default function AdminDashboard() {
           Points &amp; Leaderboard
         </button>
 
-        {/* NEW Teams button */}
         <button
           onClick={() => setActiveTab("teams")}
-          className={`admin-nav-button ${activeTab === "teams" ? "active" : ""}`}
+          className={`admin-nav-button ${
+            activeTab === "teams" ? "active" : ""
+          }`}
         >
           Teams
         </button>
 
         <button
           onClick={() => setActiveTab("rules")}
-         className={`admin-nav-button ${activeTab === "rules" ? "active" : ""}`}
+          className={`admin-nav-button ${
+            activeTab === "rules" ? "active" : ""
+          }`}
         >
           Rules
         </button>
 
-       
         <button
-        onClick={() => setActiveTab("achievements")}
-        className={`admin-nav-button ${activeTab === "achievements" ? "active" : ""}`}
-         >
-         Achievements
+          onClick={() => setActiveTab("achievements")}
+          className={`admin-nav-button ${
+            activeTab === "achievements" ? "active" : ""
+          }`}
+        >
+          Achievements
         </button>
-
-
       </aside>
 
       {/* Main content */}
@@ -382,7 +316,6 @@ export default function AdminDashboard() {
           <DashboardOverview
             committee={committee}
             quizList={quizList}
-            announcements={announcements}
             leaderboard={leaderboard}
           />
         )}
@@ -410,17 +343,8 @@ export default function AdminDashboard() {
           />
         )}
 
-        {activeTab === "announcements" && (
-          <AnnouncementSection
-            announcements={announcements}
-            newAnnouncement={newAnnouncement}
-            setNewAnnouncement={setNewAnnouncement}
-            onSubmit={handleAnnouncementSubmit}
-            onEdit={handleEditAnnouncement}
-            onDelete={handleDeleteAnnouncement}
-            isEditing={Boolean(editingAnnouncementId)}
-          />
-        )}
+        {/* Announcements use Firestore internally */}
+        {activeTab === "announcements" && <AnnouncementSection />}
 
         {activeTab === "leaderboard" && (
           <LeaderboardSection
@@ -431,48 +355,76 @@ export default function AdminDashboard() {
           />
         )}
 
-        {/* NEW: Teams Section render */}
         {activeTab === "teams" && <TeamSection />}
 
         {activeTab === "rules" && <Rules />}
 
         {activeTab === "attendance" && <Attendance />}
 
-        
         {activeTab === "achievements" && <AchievementSection />}
-
-
-
       </main>
     </div>
   );
 }
 
-/* ========== DASHBOARD OVERVIEW ========== */
+/* ========== DASHBOARD OVERVIEW (ALL 4 CARDS FROM FIRESTORE) ========== */
 
-function DashboardOverview({ committee, quizList, announcements, leaderboard }) {
+function DashboardOverview({ committee, quizList, leaderboard }) {
+  const [counts, setCounts] = useState({
+    members: 0,
+    quizzes: 0,
+    announcements: 0,
+    users: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadCounts() {
+      try {
+        setLoading(true);
+
+        // 👇 map each dashboard box → Firestore collection
+        const [members, quizzes, announcements, users] = await Promise.all([
+          getCollectionCount("committeeMembers"),        // Organizing Members
+          getCollectionCount("quizQuestions"), // Quizzes Created
+          getCollectionCount("announcements"), // Announcements
+          getCollectionCount("users"),         // Users on Leaderboard
+        ]);
+
+        setCounts({ members, quizzes, announcements, users });
+      } catch (err) {
+        console.error("Error loading dashboard counts:", err);
+        setCounts({ members: 0, quizzes: 0, announcements: 0, users: 0 });
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadCounts();
+  }, []);
+
   return (
     <div>
       <h1 className="page-title">Dashboard Overview</h1>
       <div className="stat-grid">
         <StatCard
           label="Organizing Members"
-          value={committee.length}
+          value={loading ? "…" : counts.members}
           note="President, Secretary, Treasurer"
         />
         <StatCard
           label="Quizzes Created"
-          value={quizList.length}
+          value={loading ? "…" : counts.quizzes}
           note="21 days challenge"
         />
         <StatCard
           label="Announcements"
-          value={announcements.length}
+          value={loading ? "…" : counts.announcements}
           note="Daily messages"
         />
         <StatCard
           label="Users on Leaderboard"
-          value={leaderboard.length}
+          value={loading ? "…" : counts.users}
           note="Top participants"
         />
       </div>

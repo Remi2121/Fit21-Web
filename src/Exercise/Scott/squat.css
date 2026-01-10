@@ -1,7 +1,7 @@
 /* === Squat page full-screen + layout === */
 .squat-container {
   box-sizing: border-box;
-  min-height: 100vh;
+  min-height: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -88,6 +88,7 @@
 .timer-box {
   width: min(600px, 50vw);
   height: 8rem;
+   margin-top: 1rem;
   padding-left: 1rem;
   padding-right: 1rem;
   border-radius: 14px;

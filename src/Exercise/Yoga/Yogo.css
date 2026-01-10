@@ -1,0 +1,124 @@
+/* Make background fill the full page */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+ 
+  background-repeat: no-repeat;
+  background-attachment: fixed; /* ensures full coverage when scrolling */
+  background-size: cover;
+}
+
+/* Center content */
+.yogo {
+  min-height: auto;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+   background: radial-gradient(1200px 700px at 20% 0%, #2f0303 0%, transparent 60%),
+              linear-gradient(135deg, #242425, #21050a);
+}
+
+/* Card container */
+.yogo-card {
+  width: 100%;
+  max-width: 700px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  padding: 30px;
+  color: #f2f5ff;
+  backdrop-filter: blur(10px);
+}
+
+/* Title and subtitles */
+.yogo-title {
+  margin-bottom: 12px;
+  font-size: 26px;
+  font-weight: 700;
+  text-align: center;
+  color: #ffffff;
+}
+
+.yogo-subtitle {
+  margin-top: 18px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #9cc0ff;
+}
+
+/* Note text */
+.yogo-note {
+  text-align: center;
+  color: #ffd2d2;
+  font-size: 15px;
+  margin-bottom: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Lists */
+.yogo-list {
+  margin: 10px 0 12px;
+  padding-left: 22px;
+  line-height: 1.7;
+  font-size: 15px;
+  color: #d9dff0;
+}
+.yogo-list li + li {
+  margin-top: 6px;
+}
+
+/* Image styling */
+.yogo-imgwrap {
+  margin: 18px 0 10px;
+  display: flex;
+  justify-content: center;
+}
+.yogo-image {
+  width: 100%;
+  max-width: 360px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Button styling */
+.yogo-btn {
+  display: block;
+  margin: 24px auto 8px;
+  padding: 10px 22px;
+  border: none;
+  border-radius: 10px;
+  background: #4a86ff;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(74, 134, 255, 0.35);
+  transition: transform 0.08s ease, filter 0.2s ease, box-shadow 0.2s ease;
+}
+
+.yogo-btn:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 8px 22px rgba(74, 134, 255, 0.5);
+}
+
+.yogo-btn:active {
+  transform: translateY(1px);
+}
+
+.yogo-btn:focus-visible {
+  outline: 2px solid #9cc0ff;
+  outline-offset: 2px;
+}
+
+/* Mobile responsive */
+@media (max-width: 420px) {
+  .yogo-card { padding: 20px; }
+  .yogo-title { font-size: 20px; }
+  .yogo-btn { width: 100%; }
+}
