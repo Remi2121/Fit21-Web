@@ -13,7 +13,7 @@ import {
 import "./Attendance.css";
 import Headers from "../components/header/header";
 
-/* -------------------- SAVE USER FIRESTORE (profile -> users/{uid}) -------------------- */
+/* -------------------- SAVE USER FIRESTORE -------------------- */
 const saveUserToFirestore = async (user) => {
   if (!user) return;
 
@@ -36,12 +36,11 @@ const saveUserToFirestore = async (user) => {
 
 /* -------------------- ATTENDANCE COMPONENT -------------------- */
 const Attendance = () => {
-  const [status, setStatus] = useState("checking"); // checking | not-signed-in | loaded | failed
+  const [status, setStatus] = useState("checking");
   const [user, setUser] = useState(null);
   const [tableRows, setTableRows] = useState([]);
   const [loadingTable, setLoadingTable] = useState(false);
 
-  // progress
   const [loadedCount, setLoadedCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
 
@@ -61,7 +60,11 @@ const Attendance = () => {
 
       try {
         await saveUserToFirestore(u);
-        await buildAttendanceTable(u.uid, u.displayName || "No name", u.email || null);
+        await buildAttendanceTable(
+          u.uid,
+          u.displayName || "No name",
+          u.email || null
+        );
         setStatus("loaded");
       } catch (err) {
         console.error("Attendance error:", err);
@@ -72,6 +75,7 @@ const Attendance = () => {
     return () => unsub();
   }, []);
 
+  /* -------------------- BUILD TABLE -------------------- */
   const buildAttendanceTable = async (uid, userName, userEmail) => {
     setLoadingTable(true);
     setTableRows([]);
@@ -98,13 +102,12 @@ const Attendance = () => {
         } else if (typeof data.date === "string" && data.date.trim()) {
           const parsed = new Date(data.date);
           if (!isNaN(parsed.getTime())) rawDate = parsed;
-        } else {
-          const id = docSnap.id;
-          const parsedId = new Date(id);
-          if (!isNaN(parsedId.getTime())) rawDate = parsedId;
         }
 
-        const displayDate = rawDate ? rawDate.toLocaleString() : (data.date || docSnap.id || "");
+        // 🔥 DATE ONLY (NO TIME)
+        const displayDate = rawDate
+          ? rawDate.toLocaleDateString()
+          : data.date || "";
 
         const presentFlag = Object.prototype.hasOwnProperty.call(data, "present")
           ? !!data.present
@@ -117,21 +120,22 @@ const Attendance = () => {
           userName,
           userEmail,
           attended: presentFlag,
+          day: data.day ?? "-",   // 🔥 ADD THIS LINE
         };
       });
 
       rows.sort((a, b) => {
-        if (a.dateRaw && b.dateRaw) return a.dateRaw.getTime() - b.dateRaw.getTime();
+        if (a.dateRaw && b.dateRaw)
+          return a.dateRaw.getTime() - b.dateRaw.getTime();
         if (a.dateRaw && !b.dateRaw) return -1;
         if (!a.dateRaw && b.dateRaw) return 1;
         return a.id.localeCompare(b.id);
       });
+     setTableRows(rows);
+setLoadedCount(rows.length);
+setTotalCount(rows.length);
 
-      const numbered = rows.map((r, i) => ({ ...r, day: i + 1 }));
-
-      setTableRows(numbered);
-      setLoadedCount(numbered.length);
-      setTotalCount(numbered.length);
+      
     } catch (err) {
       console.error("buildAttendanceTable error:", err);
     } finally {
@@ -146,19 +150,32 @@ const Attendance = () => {
         <div className="attendance-card">
           <div className="card-top">
             <h2 className="att-heading">Daily Attendance</h2>
-            {status === "checking" && <p className="att-status">Loading attendance…</p>}
-            {status === "not-signed-in" && (
-              <p className="att-status">Please sign in to view your attendance.</p>
+
+            {status === "checking" && (
+              <p className="att-status">Loading attendance…</p>
             )}
-            {status === "loaded" && <p className="att-status success">Your attendance list below</p>}
+            {status === "not-signed-in" && (
+              <p className="att-status">
+                Please sign in to view your attendance.
+              </p>
+            )}
+            {status === "loaded" && (
+              <p className="att-status success">
+                Your attendance list below
+              </p>
+            )}
             {status === "failed" && (
-              <p className="att-status error">Could not load attendance. Try again later.</p>
+              <p className="att-status error">
+                Could not load attendance. Try again later.
+              </p>
             )}
           </div>
 
           {user && (
             <div className="user-block">
-              <div className="user-name">{user.displayName || "No name"}</div>
+              <div className="user-name">
+                {user.displayName || "No name"}
+              </div>
               <div className="user-email">{user.email}</div>
               <div className="user-uid">UID: {user.uid}</div>
             </div>
@@ -177,7 +194,7 @@ const Attendance = () => {
               {tableRows.length === 0 && !loadingTable ? (
                 <p className="no-records">No attendance records yet.</p>
               ) : (
-                <table className="attendance-table three-d" aria-describedby="attendance-list">
+                <table className="attendance-table three-d">
                   <thead>
                     <tr>
                       <th>DAY</th>
@@ -189,13 +206,17 @@ const Attendance = () => {
                   </thead>
                   <tbody>
                     {tableRows.map((r) => (
-                      <tr key={r.id} className="row-3d" tabIndex={0}>
+                      <tr key={r.id} className="row-3d">
                         <td>{r.day}</td>
                         <td>{r.date}</td>
                         <td>{r.userName}</td>
                         <td>{r.userEmail}</td>
                         <td>
-                          <span className={r.attended ? "pill pill-yes" : "pill pill-no"}>
+                          <span
+                            className={
+                              r.attended ? "pill pill-yes" : "pill pill-no"
+                            }
+                          >
                             {r.attended ? "Yes" : "No"}
                           </span>
                         </td>
@@ -210,10 +231,12 @@ const Attendance = () => {
       </div>
 
       {loadingTable && (
-        <div className="attendance-loading-overlay" aria-hidden>
+        <div className="attendance-loading-overlay">
           <div className="attendance-loading-card">
             <div className="loading-title">Loading attendance…</div>
-            <div className="loading-sub">{loadedCount} / {totalCount}</div>
+            <div className="loading-sub">
+              {loadedCount} / {totalCount}
+            </div>
           </div>
         </div>
       )}
