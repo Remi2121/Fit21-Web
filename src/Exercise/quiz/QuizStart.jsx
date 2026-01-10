@@ -10,10 +10,10 @@ import {
   where,
   getDocs,
   serverTimestamp,
-  // NEW:
   doc,
   getDoc,
   setDoc,
+  increment,
 } from "firebase/firestore";
 
 /* Map Firestore letter to index */
@@ -25,9 +25,18 @@ function docToQuestion(docu) {
   const d = docu.data();
   return {
     id: d.id || docu.id,
+    day: Number(d.day) || 0,
     text: d.question || "",
     options: [d.optionA, d.optionB, d.optionC, d.optionD].map((x) => x ?? ""),
     correctIndex: letterToIndex(d.correctOption),
+    // exact spelling kept:
+    perQuestionPoints:
+      typeof d.ponits_for_this_question === "number"
+        ? d.ponits_for_this_question
+        : null,
+    // optional fallback (if admin propagated):
+    timeLimitMinutes:
+      typeof d.timeLimitMinutes === "number" ? d.timeLimitMinutes : null,
   };
 }
 
@@ -42,7 +51,7 @@ const fmt = (s) => {
   return `${m}:${ss}`;
 };
 
-/* YYYY-MM-DD for "one attempt per day" */
+/* YYYY-MM-DD for one-attempt-per-day & per-day exercise path */
 const getDayKey = () => new Date().toISOString().slice(0, 10);
 
 export default function QuizStart() {
@@ -56,18 +65,25 @@ export default function QuizStart() {
   const [answers, setAnswers] = useState({}); // { [qid]: optionIndex }
   const [submitted, setSubmitted] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
-  const [score, setScore] = useState(0);
 
-  // --- One-per-day lock ---
+  // counts/points
+  const [scoreCount, setScoreCount] = useState(0); // number of correct answers
+  const [pointsEarned, setPointsEarned] = useState(0); // sum of points on correct
+  const [maxPoints, setMaxPoints] = useState(20); // from day settings
+
+  // which day’s quiz is running (inferred from published docs)
+  const [activeDay, setActiveDay] = useState(null);
+
+  // one-per-day lock
   const [alreadyDone, setAlreadyDone] = useState(false);
   const [prevResult, setPrevResult] = useState(null);
 
-  // --- Time limit ---
+  // timer
   const [timeLimitSec, setTimeLimitSec] = useState(10 * 60); // default 10 mins
   const [timeLeftSec, setTimeLeftSec] = useState(10 * 60);
   const timerRef = useRef(null);
 
-  // Auth
+  // Auth subscribe
   useEffect(() => {
     const auth = getAuth();
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -77,7 +93,7 @@ export default function QuizStart() {
     return () => unsub();
   }, []);
 
-  // Fetch: (A) check existing attempt, (B) settings, (C) questions
+  // Load attempt status, questions, day settings
   useEffect(() => {
     if (!authReady) return;
     if (!user) {
@@ -87,36 +103,19 @@ export default function QuizStart() {
 
     (async () => {
       try {
-        // ---- A) Has user already finished today? ----
+        // A) already finished today?
         const dayKey = getDayKey();
-        const answerDocId = `${user.uid}_${dayKey}`;
-        const ansRef = doc(db, "quizAnswers", answerDocId);
+        const ansRef = doc(db, "quizAnswers", `${user.uid}_${dayKey}`);
         const ansSnap = await getDoc(ansRef);
-
         if (ansSnap.exists()) {
           setAlreadyDone(true);
           setSubmitted(true);
           setPrevResult(ansSnap.data());
           setLoading(false);
-          return; // stop here; do not load questions/timer
+          return; // stop here
         }
 
-        // ---- B) Admin time limit (optional) ----
-        try {
-          const sSnap = await getDocs(collection(db, "quizSettings"));
-          if (!sSnap.empty) {
-            const first = sSnap.docs[0].data();
-            const mins = Number(first?.timeLimitMinutes);
-            if (!Number.isNaN(mins) && mins > 0) {
-              setTimeLimitSec(mins * 60);
-              setTimeLeftSec(mins * 60);
-            }
-          }
-        } catch (e) {
-          console.warn("quizSettings load failed; using default 10 mins.", e);
-        }
-
-        // ---- C) Load questions ----
+        // B) load published questions
         const qy = query(
           collection(db, "quizQuestions"),
           where("published", "==", true)
@@ -124,10 +123,53 @@ export default function QuizStart() {
         const snap = await getDocs(qy);
         const items = [];
         snap.forEach((docu) => items.push(docToQuestion(docu)));
-        setQuestions(items);
+
+        // infer active day (most frequent day among published)
+        const dayCounts = {};
+        for (const q of items) dayCounts[q.day] = (dayCounts[q.day] || 0) + 1;
+        const pickedDay =
+          Object.keys(dayCounts).length > 0
+            ? Number(
+                Object.keys(dayCounts).sort(
+                  (a, b) => dayCounts[b] - dayCounts[a]
+                )[0]
+              )
+            : null;
+
+        const itemsForDay =
+          pickedDay != null ? items.filter((q) => q.day === pickedDay) : items;
+
+        setQuestions(itemsForDay);
+        setActiveDay(pickedDay);
+
+        // C) load per-day settings
+        let maxPts = 20;
+        let timeLimitMins = 10;
+
+        if (pickedDay != null) {
+          const cfgSnap = await getDoc(
+            doc(db, "quizDaySettings", `day_${pickedDay}`)
+          );
+          if (cfgSnap.exists()) {
+            const v = cfgSnap.data();
+            if (typeof v?.maxPoints === "number") maxPts = v.maxPoints;
+            if (typeof v?.timeLimitMinutes === "number")
+              timeLimitMins = v.timeLimitMinutes;
+          } else {
+            // fallback: if a question doc has timeLimitMinutes
+            const qWithTL = itemsForDay.find(
+              (q) => typeof q.timeLimitMinutes === "number"
+            );
+            if (qWithTL) timeLimitMins = qWithTL.timeLimitMinutes;
+          }
+        }
+
+        setMaxPoints(maxPts);
+        setTimeLimitSec(timeLimitMins * 60);
+        setTimeLeftSec(timeLimitMins * 60);
       } catch (err) {
-        console.error("Load quiz failed:", err.code, err.message);
-        alert(`Couldn't load quiz. Check Firestore rules/connection.`);
+        console.error("Load quiz failed:", err);
+        alert("Couldn't load quiz. Check Firestore rules/connection.");
       } finally {
         setLoading(false);
       }
@@ -171,42 +213,113 @@ export default function QuizStart() {
     [answeredCount, total]
   );
 
+  // fallback if question docs don’t have per-question points
+  const perQuestionPoints =
+    total > 0 && typeof questions[0]?.perQuestionPoints === "number"
+      ? questions[0].perQuestionPoints
+      : maxPoints / Math.max(total, 1);
+
   const handlePick = (qid, idx) => {
     if (submitted || timedOut || timeLeftSec <= 0 || alreadyDone) return; // locked
     setAnswers((prev) => ({ ...prev, [qid]: idx }));
   };
 
+  // Calculate correct count & points
   const buildResult = () => {
     let ok = 0;
+    let pts = 0;
+
     const details = questions.map((q, i) => {
       const chosenIndex = answers[q.id];
       const correct =
         typeof q.correctIndex === "number" && q.correctIndex === chosenIndex;
-      if (correct) ok += 1;
+      if (correct) {
+        ok += 1;
+        const p =
+          typeof q.perQuestionPoints === "number"
+            ? q.perQuestionPoints
+            : perQuestionPoints;
+        pts += p;
+      }
       return {
         qNo: i + 1,
         id: q.id,
+        day: q.day,
         question: q.text,
         options: q.options,
         correctIndex: q.correctIndex,
         correctText:
           typeof q.correctIndex === "number" ? q.options[q.correctIndex] : null,
         chosenIndex:
-          typeof chosenIndex === "number" ? chosenIndex : null, // null if not answered
+          typeof chosenIndex === "number" ? chosenIndex : null,
         chosenText:
           typeof chosenIndex === "number" ? q.options[chosenIndex] : null,
         isCorrect: !!correct,
+        // keep exact field spelling for reference:
+        ponits_for_this_question:
+          typeof q.perQuestionPoints === "number"
+            ? q.perQuestionPoints
+            : perQuestionPoints,
       };
     });
-    const percentage = total ? Math.round((ok / total) * 100) : 0;
-    return { ok, percentage, details };
+
+    const maxPts =
+      typeof maxPoints === "number" ? maxPoints : ok * perQuestionPoints;
+
+    // You showed integer points in examples; round to int:
+    const ptsRounded = Math.round(pts);
+    const pctByPoints = maxPts > 0 ? Math.round((ptsRounded / maxPts) * 100) : 0;
+
+    return { ok, pts: ptsRounded, maxPts, pctByPoints, details };
   };
 
-  // Save with fixed doc id (one-per-day)
-  const persistResult = async ({ ok, percentage, details }, extra = {}) => {
+  // Save points under exercises/quiz/days/<YYYY-MM-DD> and increment finalScore
+  const saveExercisePointsAndIncrement = async (points) => {
+    if (!user?.uid) return;
+    const dayKey = getDayKey();
+
+    // 1) users/<uid>/exercises/quiz/days/<YYYY-MM-DD>
+    const dayRef = doc(
+      db,
+      "users",
+      user.uid,
+      "exercises",
+      "quiz",
+      "days",
+      dayKey
+    );
+    await setDoc(
+      dayRef,
+      {
+        date: dayKey, // string "2025-11-22"
+        points: points, // number
+        savedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    // 2) users/<uid> -> finalScore += points
+    const userRef = doc(db, "users", user.uid);
+    await setDoc(
+      userRef,
+      {
+        finalScore: increment(points),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  };
+
+  // Save attempt to quizAnswers + exercise path + increment finalScore
+  const persistResult = async (
+    { ok, pts, maxPts, pctByPoints, details },
+    extra = {}
+  ) => {
     try {
       const dayKey = getDayKey();
       const answerDocId = `${user?.uid || "anon"}_${dayKey}`;
+
+      // quizAnswers/<uid>_<date>
       await setDoc(
         doc(db, "quizAnswers", answerDocId),
         {
@@ -215,28 +328,34 @@ export default function QuizStart() {
           finishedAt: serverTimestamp(),
           userId: user?.uid || null,
           dayKey,
-          total,
-          correct: ok,
-          percentage,
+          activeDay: activeDay ?? null,
+          totalQuestions: total,
+          correctCount: ok,
+          pointsEarned: pts,
+          maxPoints: maxPts,
+          pointsPercent: pctByPoints,
           timeLimitSec,
-          timeLeftSec: extra.timedOut ? 0 : (extra.timeLeftSec ?? 0),
+          timeLeftSec: extra.timedOut ? 0 : extra.timeLeftSec ?? 0,
           timeSpentSec:
-            timeLimitSec - (extra.timedOut ? 0 : (extra.timeLeftSec ?? 0)),
+            timeLimitSec - (extra.timedOut ? 0 : extra.timeLeftSec ?? 0),
           timedOut: !!extra.timedOut,
           answers: details,
         },
         { merge: false }
       );
+
+      // exercises/quiz/days/<date> + increment finalScore
+      await saveExercisePointsAndIncrement(pts);
     } catch (e) {
-      console.error("Saving answers failed:", e.code, e.message);
-      alert(`Couldn't save answers: ${e.code || ""} ${e.message || ""}`);
+      console.error("Saving answers failed:", e);
+      alert(`Couldn't save answers: ${e?.code || ""} ${e?.message || ""}`);
     }
   };
 
   const handleSubmit = async () => {
     if (submitted || alreadyDone) return;
 
-    // validate all answered (only for manual submit; timeout skips this)
+    // ensure all answered (manual submit only)
     const missing = questions.filter((q) => !(q.id in answers));
     if (missing.length > 0) {
       const first = missing[0];
@@ -250,7 +369,8 @@ export default function QuizStart() {
     clearInterval(timerRef.current);
     const result = buildResult();
     await persistResult(result, { timedOut: false, timeLimitSec, timeLeftSec });
-    setScore(result.ok);
+    setScoreCount(result.ok);
+    setPointsEarned(result.pts);
     setSubmitted(true);
   };
 
@@ -263,11 +383,12 @@ export default function QuizStart() {
       timeLimitSec,
       timeLeftSec: 0,
     });
-    setScore(result.ok);
+    setScoreCount(result.ok);
+    setPointsEarned(result.pts);
     setSubmitted(true);
   };
 
-  // --- Render guards ---
+  // ---------- RENDER GUARDS ----------
   if (!authReady) {
     return (
       <div className="quiz-root">
@@ -298,24 +419,41 @@ export default function QuizStart() {
     );
   }
 
-  // If already finished today, show message + (optional) score
+  // If already finished today, show message + points summary (if available)
   if (alreadyDone) {
     const pct =
-      typeof prevResult?.percentage === "number" ? prevResult.percentage : null;
+      typeof prevResult?.pointsPercent === "number"
+        ? prevResult.pointsPercent
+        : typeof prevResult?.percentage === "number"
+        ? prevResult.percentage
+        : null;
+
+    const showPts =
+      typeof prevResult?.pointsEarned === "number" &&
+      typeof prevResult?.maxPoints === "number";
+
     return (
       <div className="quiz-root">
         <header className="quiz-topbar">
           <div className="quiz-title">Fitness Basics Quiz</div>
           <div className="quiz-meta">
             <span className="pill">You have already finished today’s quiz ✅</span>
-            {typeof pct === "number" && (
+            {showPts ? (
+              <span
+                className="pill"
+                style={{ background: "rgba(34,197,94,.2)" }}
+              >
+                Points: {prevResult.pointsEarned}/{prevResult.maxPoints} (
+                {pct}%)
+              </span>
+            ) : pct != null ? (
               <span
                 className="pill"
                 style={{ background: "rgba(34,197,94,.2)" }}
               >
                 Score: {prevResult?.correct}/{prevResult?.total} ({pct}%)
               </span>
-            )}
+            ) : null}
           </div>
         </header>
 
@@ -329,16 +467,21 @@ export default function QuizStart() {
     );
   }
 
-  // --- Main UI ---
+  // ---------- MAIN UI ----------
+  const perQ = perQuestionPoints;
+
   return (
     <div className="quiz-root">
       {/* Top bar */}
       <header className="quiz-topbar">
-        <div className="quiz-title">Fitness Basics Quiz</div>
+        <div className="quiz-title">
+          Fitness Basics Quiz{activeDay ? ` — Day ${activeDay}` : ""}
+        </div>
         <div className="quiz-meta">
           <span className="pill">Questions: {total}</span>
           <span className="pill pill-muted">Answered: {answeredCount}</span>
-
+          <span className="pill">Max: {maxPoints}</span>
+          <span className="pill">1 Q = {perQ}</span>
           {/* ⏳ Timer on the right */}
           <span
             className={`pill pill-timer ${
@@ -347,13 +490,21 @@ export default function QuizStart() {
           >
             ⏳ {fmt(timeLeftSec)}
           </span>
-
           {submitted && (
-            <span className="pill" style={{ background: "rgba(34,197,94,.2)" }}>
-              Score: {score}/{total} (
-              {total ? Math.round((score / total) * 100) : 0}
-              %)
-            </span>
+            <>
+              <span
+                className="pill"
+                style={{ background: "rgba(34,197,94,.2)" }}
+              >
+                Correct: {scoreCount}/{total}
+              </span>
+              <span
+                className="pill"
+                style={{ background: "rgba(34,197,94,.2)" }}
+              >
+                Points: {pointsEarned}/{maxPoints}
+              </span>
+            </>
           )}
         </div>
       </header>
@@ -410,7 +561,9 @@ export default function QuizStart() {
                     <label
                       key={`${q.id}-${idx}`}
                       className={`option ${extraClass} ${
-                        submitted || timedOut || timeLeftSec <= 0 ? "disabled" : ""
+                        submitted || timedOut || timeLeftSec <= 0
+                          ? "disabled"
+                          : ""
                       }`}
                       onClick={() => handlePick(q.id, idx)}
                     >

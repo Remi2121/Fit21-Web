@@ -1,11 +1,17 @@
 /* ===== Chair Pose – same visual style as BigToe/Bridge ===== */
 
-.ch-container{
-  text-align:center;
-  padding:16px 10px 24px;
+.ch-container {
+  position: relative;
+  min-height: 100vh;               
+  width: 100%;
+  text-align: center;
+  padding: 16px 10px 24px;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   background: radial-gradient(1200px 700px at 20% 0%, #2f0303 0%, transparent 60%),
-             linear-gradient(135deg, #242425, #21050a);
+              linear-gradient(135deg, #242425, #21050a);
+  background-repeat: no-repeat;
+  background-size: cover;          
+  background-attachment: fixed;    
 }
 
 .ch-container h2{
@@ -13,7 +19,6 @@
   font-weight: 800;
   letter-spacing: .2px;
   font-size: 2rem;
-  color:#fff;
 }
 
 /* Canvas */
@@ -86,7 +91,7 @@
 .ch-status{
   display:flex;
   padding-top:1rem;
-  margin-top:10px;
+  margin-top:5px;
   font-size:1rem;
   color:#f9f9f9;
   align-items:center;
@@ -135,3 +140,63 @@
   box-shadow:0 6px 18px rgba(0,0,0,.25);
 }
 .resetbutton:active{ transform:scale(.96); }
+
+/* ===== Chair Pose — Popup (match Big Toe modal look) ===== */
+
+.ch-done {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;   /* center vertically */
+  justify-content: center;
+  z-index: 50;
+  animation: ch-fadeIn 0.25s ease-out;
+}
+
+.ch-done-card {
+  width: min(520px, 92vw);
+  background: linear-gradient(180deg, #111827, #0b1020);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+  text-align: center;
+  animation: ch-scaleIn 0.3s ease-out;
+}
+
+.ch-done-card h3,
+.ch-done-card p {
+  color: #fff;
+}
+
+/* Use the same shared button style as Big Toe (or keep your existing .resetbutton) */
+.resetbutton {
+  padding: 10px 20px;
+  background: #4f8df6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 10px;
+  transition: 0.25s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+.resetbutton:hover {
+  background: #2e75ff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+.resetbutton:active { transform: scale(0.96); }
+
+/* Animations */
+@keyframes ch-fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes ch-scaleIn {
+  0%   { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1);   opacity: 1; }
+}

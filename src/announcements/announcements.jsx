@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useMemo, useState } from "react";
 import "./announcements.css";
 import { db, storage } from "../firebase";
@@ -22,7 +23,7 @@ const isYouTube = (url, mediaType) => {
 
 const getYouTubeEmbed = (raw) => {
   try {
-    const u = new URL(raw);
+    const u = new URL(raw.startsWith("http") ? raw : `https://${raw}`);
     let id = "";
 
     if (u.hostname.includes("youtube.com") && u.searchParams.get("v")) {
@@ -56,12 +57,26 @@ const getYouTubeEmbed = (raw) => {
 };
 
 const videoExtRe = /\.(mp4|m4v|webm|ogg|ogv|mov|mkv)(\?.*)?$/i;
+const imgExtRe = /\.(png|jpe?g|gif|webp|avif|svg)(\?.*)?$/i;
+
 const isVideoFile = (url, mediaType) => {
   if (!url) return false;
   if (mediaType === "video") return true;
   if (mediaType === "image" || mediaType === "youtube") return false;
   return videoExtRe.test(url);
 };
+const isImageFile = (url, mediaType) => {
+  if (!url) return false;
+  if (mediaType === "image") return true;
+  if (mediaType === "video" || mediaType === "youtube") return false;
+  return imgExtRe.test(url);
+};
+
+const isGenericLink = (url, mediaType) =>
+  !!url &&
+  !isYouTube(url, mediaType) &&
+  !isVideoFile(url, mediaType) &&
+  !isImageFile(url, mediaType);
 
 const guessMime = (url) => {
   const m = String(url).toLowerCase().match(videoExtRe);
@@ -84,13 +99,67 @@ const guessMime = (url) => {
   }
 };
 
+/* ---------- Clean linkify (no duplicate https or host label) ---------- */
+const urlRe = /\b((?:https?:\/\/|www\.)[^\s<]+[^<.,:;"')\]\s])/gi;
+
+function toAbsolute(href) {
+  return href.startsWith("http") ? href : `https://${href}`;
+}
+
+function prettyText(raw) {
+  // remove scheme + www for cleaner display
+  return raw.replace(/^https?:\/\//i, "").replace(/^www\./i, "");
+}
+
+function linkify(text) {
+  if (!text) return null;
+
+  const nodes = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = urlRe.exec(text)) !== null) {
+    const start = match.index;
+    const end = start + match[0].length;
+
+    // plain text before link
+    if (start > lastIndex) {
+      nodes.push(<span key={`t-${lastIndex}`}>{text.slice(lastIndex, start)}</span>);
+    }
+
+    const raw = match[0];
+    const href = toAbsolute(raw);
+
+    nodes.push(
+      <a
+        key={`a-${start}`}
+        href={href}
+        className="anno-link"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <span className="anno-link-dot" aria-hidden>🔗</span>
+        <span className="anno-link-text">{prettyText(raw)}</span>
+      </a>
+    );
+
+    lastIndex = end;
+  }
+
+  // remaining text
+  if (lastIndex < text.length) {
+    nodes.push(<span key={`t-${lastIndex}`}>{text.slice(lastIndex)}</span>);
+  }
+
+  return nodes;
+}
+
 export default function Announcement() {
   const transition = { type: "spring", duration: 3 };
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [idx, setIdx] = useState(0);
 
-  /* ---------- Fetch Announcements & Resolve Storage URLs ---------- */
   useEffect(() => {
     const q = query(
       collection(db, "announcements"),
@@ -119,14 +188,14 @@ export default function Announcement() {
                 const ref = storageRef(storage, withoutPrefix);
                 url = await getDownloadURL(ref);
               } catch (err) {
-                console.warn("Failed to getDownloadURL for gs://", url, err);
+                console.warn("Failed getDownloadURL for gs://", url, err);
               }
             } else if (isPath) {
               try {
                 const ref = storageRef(storage, url);
                 url = await getDownloadURL(ref);
               } catch (err) {
-                console.warn("Failed to getDownloadURL for storage path", url, err);
+                console.warn("Failed getDownloadURL for storage path", url, err);
               }
             }
 
@@ -160,7 +229,7 @@ export default function Announcement() {
         <h2 className="stoke-text">Announcement</h2>
 
         {loading && (
-          <div className="announce-skeleton">
+          <div className="announce-skeleton" role="status" aria-live="polite">
             <div className="sk-media" />
             <div className="sk-lines">
               <div className="sk-line" />
@@ -179,12 +248,14 @@ export default function Announcement() {
                 whileInView={{ opacity: 1, x: 0 }}
                 transition={{ type: "spring", duration: 1.2 }}
                 className="anoframe"
+                aria-hidden
               />
               <motion.div
                 initial={{ opacity: 0, x: 60 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 transition={{ type: "spring", duration: 1.2 }}
                 className="anobg-block"
+                aria-hidden
               />
 
               {isYouTube(ann.mediaUrl, ann.mediaType) ? (
@@ -203,13 +274,23 @@ export default function Announcement() {
                   <source src={ann.mediaUrl} type={guessMime(ann.mediaUrl)} />
                   Your browser cannot play this video.
                 </video>
-              ) : ann.mediaUrl ? (
+              ) : isImageFile(ann.mediaUrl, ann.mediaType) ? (
                 <img
                   key={`i-${ann.id}`}
                   className="media-box"
                   src={ann.mediaUrl}
                   alt={ann.title || "Announcement"}
                 />
+              ) : isGenericLink(ann.mediaUrl, ann.mediaType) ? (
+                <a
+                  key={`g-${ann.id}`}
+                  href={toAbsolute(ann.mediaUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="anno-cta"
+                >
+                  Open attachment
+                </a>
               ) : (
                 <div className="media-box no-media">No media</div>
               )}
@@ -218,27 +299,36 @@ export default function Announcement() {
                 <div className="anoarrows">
                   <img
                     src={leftArrow}
-                    alt="previous"
+                    alt="Previous"
                     className={`arrow-img ${hasPrev ? "" : "disabled"}`}
                     onClick={hasPrev ? prev : undefined}
+                    tabIndex={0}
+                    onKeyDown={(e) =>
+                      hasPrev && (e.key === "Enter" || e.key === " ") ? prev() : null
+                    }
                   />
                   <img
                     src={rightArrow}
-                    alt="next"
+                    alt="Next"
                     className={`arrow-img ${hasNext ? "" : "disabled"}`}
                     onClick={hasNext ? next : undefined}
+                    tabIndex={0}
+                    onKeyDown={(e) =>
+                      hasNext && (e.key === "Enter" || e.key === " ") ? next() : null
+                    }
                   />
                 </div>
               )}
             </div>
-           
-            <motion.div 
-            initial={{ opacity: 0, x: -100 }}
-          transition={{ ...transition, duration: 3 }}
-          whileInView={{ opacity: 1, x: 0 }}
-            className="announce-text">
+
+            <motion.div
+              initial={{ opacity: 0, x: -100 }}
+              transition={{ ...transition, duration: 3 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              className="announce-text"
+            >
               <h3>{ann.title || "Untitled"}</h3>
-              {ann.body && <p>{ann.body}</p>}
+              {ann.body && <p className="anno-body">{linkify(ann.body)}</p>}
             </motion.div>
           </div>
         )}
