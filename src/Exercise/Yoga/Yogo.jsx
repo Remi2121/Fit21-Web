@@ -1,5 +1,7 @@
 
 import BigToe from "./Big Toe/Big-Toe"
+import ChairPose from "./Chair/Chairpose";
+import WarriorIII from "./WarriorIII/WarriorIII";
 
 const Yogo = () => {
   return (
