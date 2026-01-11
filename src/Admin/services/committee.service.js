@@ -9,6 +9,10 @@ import {
   doc,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { serverTimestamp } from "firebase/firestore";
+import { query, orderBy } from "firebase/firestore";
+
+
 
 const COMMITTEE_COLLECTION = "committeeMembers";
 
@@ -18,12 +22,19 @@ function getCollectionRef() {
 
 // Get all members
 export async function getCommitteeMembers() {
-  const snap = await getDocs(getCollectionRef());
+  const q = query(
+    getCollectionRef(),
+    orderBy("createdAt", "asc") // 👈 OLD → NEW (new ones LAST)
+  );
+
+  const snap = await getDocs(q);
+
   return snap.docs.map((d) => ({
     id: d.id,
     ...d.data(),
   }));
 }
+
 
 // Internal helper to upload photo
 async function uploadPhotoForMember(memberId, file) {
@@ -36,13 +47,15 @@ async function uploadPhotoForMember(memberId, file) {
 // Add new member (with optional photo)
 export async function addCommitteeMember(member, photoFile) {
   // 1. create doc first (without photoUrl or empty)
-  const docRef = await addDoc(getCollectionRef(), {
-    name: member.name,
-    role: member.role,
-    phone: member.phone || "",
-    email: member.email || "",
-    photoUrl: "", // will update if photo uploaded
-  });
+const docRef = await addDoc(getCollectionRef(), {
+  name: member.name,
+  role: member.role,
+  phone: member.phone || "",
+  email: member.email || "",
+  photoUrl: "",
+  createdAt: serverTimestamp(), // 👈 THIS LINE
+});
+
 
   // 2. if photo selected → upload & update
   if (photoFile) {
