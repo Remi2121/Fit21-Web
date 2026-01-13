@@ -16,98 +16,34 @@ import "./Attendance.css";
 export default function Attendance() {
   const [selectedDay, setSelectedDay] = useState(1);
 
-  // 🔥 Date select
+  // Date only for saving record
   const [selectedDate, setSelectedDate] = useState(() => {
     const d = new Date();
-    return d.toISOString().split("T")[0]; // yyyy-mm-dd
+    return d.toISOString().split("T")[0];
   });
 
-  // search/mark
-  const [queryText, setQueryText] = useState("");
-  const [results, setResults] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
 
-  // lists
   const [markedList, setMarkedList] = useState([]);
   const [markedLoading, setMarkedLoading] = useState(false);
 
-  const [allUsers, setAllUsers] = useState([]);
-  const [allLoading, setAllLoading] = useState(false);
-
-  const dayOptions = Array.from({ length: 21 }, (_, i) => i + 1);
+  const [savingId, setSavingId] = useState(null);
+  const [message, setMessage] = useState("");
 
   const formatDate = (d) =>
     d ? new Date(d).toLocaleDateString() : "—";
 
-  /* ---------- LOAD MARKED (ROBUST) ---------- */
-  const loadMarkedForDay = async (dayNum) => {
-    setMarkedLoading(true);
+  const dayOptions = Array.from({ length: 21 }, (_, i) => i + 1);
+
+  /* ---------- LOAD USERS (EVERY USER) ---------- */
+  const loadUsers = async (dayNum) => {
+    setLoading(true);
     try {
-      // 1️⃣ Try collectionGroup
-      const cg = query(
-        collectionGroup(db, "attendance"),
-        where("day", "==", Number(dayNum))
-      );
-      const snap = await getDocs(cg);
+      const snap = await getDocs(collection(db, "users"));
 
-      if (!snap.empty) {
-        const rows = [];
-        snap.forEach((d) => {
-          const data = d.data() || {};
-          if (data.present) {
-            rows.push({
-              id: d.id,
-              name: data.name || "No Name",
-              email: data.email || "",
-              present: true,
-              date: data.date || null,
-            });
-          }
-        });
-        setMarkedList(rows);
-      } else {
-        throw new Error("Empty CG");
-      }
-    } catch {
-      // 2️⃣ Fallback: users/{uid}/attendance/day-X
-      const usersSnap = await getDocs(collection(db, "users"));
-      const rows = [];
-
-      for (const udoc of usersSnap.docs) {
-        const ref = doc(
-          db,
-          "users",
-          udoc.id,
-          "attendance",
-          `day-${dayNum}`
-        );
-        const snap = await getDoc(ref);
-        if (snap.exists() && snap.data().present) {
-          const d = snap.data();
-          rows.push({
-            id: udoc.id,
-            name: d.name || "No Name",
-            email: d.email || "",
-            present: true,
-            date: d.date || null,
-          });
-        }
-      }
-      setMarkedList(rows);
-    } finally {
-      setMarkedLoading(false);
-    }
-  };
-
-  /* ---------- EVERY USER STATUS ---------- */
-  const loadAllUsersWithStatus = async (dayNum) => {
-    setAllLoading(true);
-    try {
-      const usersSnap = await getDocs(collection(db, "users"));
       const rows = await Promise.all(
-        usersSnap.docs.map(async (udoc) => {
+        snap.docs.map(async (udoc) => {
           const u = udoc.data() || {};
           const ref = doc(
             db,
@@ -116,74 +52,21 @@ export default function Attendance() {
             "attendance",
             `day-${dayNum}`
           );
-          const snap = await getDoc(ref);
-          const present = snap.exists() ? !!snap.data().present : false;
+
+          const attSnap = await getDoc(ref);
 
           return {
             id: udoc.id,
             name: u.username || u.name || "No Name",
             email: u.email || "",
-            status: present ? "Present" : "Not Marked",
+            present: attSnap.exists()
+              ? attSnap.data().present
+              : null,
           };
         })
       );
-      setAllUsers(rows);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setAllLoading(false);
-    }
-  };
 
-  useEffect(() => {
-    loadMarkedForDay(selectedDay);
-    loadAllUsersWithStatus(selectedDay);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDay]);
-
-  /* ---------- SEARCH ---------- */
-  const handleSearch = async () => {
-    setResults([]);
-    setMessage("");
-    const term = queryText.trim().toLowerCase();
-    if (!term) return;
-
-    setLoading(true);
-    try {
-      const snap = await getDocs(collection(db, "users"));
-      const filtered = snap.docs.filter((d) => {
-        const data = d.data() || {};
-        return (
-          (data.email || "").toLowerCase() === term ||
-          (data.name || "").toLowerCase().startsWith(term)
-        );
-      });
-
-const items = await Promise.all(
-  filtered.map(async (d) => {
-    const data = d.data() || {};
-
-    const ref = doc(
-      db,
-      "users",
-      d.id,
-      "attendance",
-      `day-${selectedDay}`
-    );
-
-    const attSnap = await getDoc(ref);
-
-    return {
-      docId: d.id,
-      name: data.name || "No Name",
-      email: data.email || "",
-      present: attSnap.exists() ? !!attSnap.data().present : false,
-    };
-  })
-);
-
-
-      setResults(items);
+      setUsers(rows);
     } catch (e) {
       console.error(e);
     } finally {
@@ -191,55 +74,120 @@ const items = await Promise.all(
     }
   };
 
-// ---------- SAVE ----------
-const saveSingle = async (item) => {
-  setSaving(true);
-  setMessage("");
-
+/* ---------- LOAD MARKED (ROBUST) ---------- */
+const loadMarkedForDay = async (dayNum) => {
+  setMarkedLoading(true);
   try {
-    const ref = doc(
-      db,
-      "users",
-      item.docId,
-      "attendance",
-      `day-${selectedDay}`
+    // 1️⃣ Try collectionGroup
+    const cg = query(
+      collectionGroup(db, "attendance"),
+      where("day", "==", Number(dayNum))
     );
+    const snap = await getDocs(cg);
 
-    // ✅ ALWAYS SAVE DOCUMENT
-    await setDoc(
-      ref,
-      {
-        day: Number(selectedDay),
-        date: selectedDate,     // yyyy-mm-dd
-        present: item.present,  // true OR false
-        email: item.email,
-        name: item.name,
-      },
-      { merge: true }
-    );
+    if (!snap.empty) {
+      const rows = [];
+      snap.forEach((d) => {
+        const data = d.data() || {};
+        // Push all, not just present
+        rows.push({
+          id: d.id,
+          name: data.name || "No Name",
+          email: data.email || "",
+          present: data.present, // true / false
+          date: data.date || null,
+        });
+      });
 
-    setMessage(
-      item.present
-        ? `Saved attendance for ${item.name}`
-        : `Marked absent for ${item.name}`
-    );
+      setMarkedList(rows);
+    } else {
+      throw new Error("Empty CG");
+    }
+  } catch {
+    // 2️⃣ Fallback: users/{uid}/attendance/day-X
+    const usersSnap = await getDocs(collection(db, "users"));
+    const rows = [];
 
-    await loadMarkedForDay(selectedDay);
-    await loadAllUsersWithStatus(selectedDay);
-  } catch (e) {
-    console.error(e);
-    setMessage("Action failed");
+    for (const udoc of usersSnap.docs) {
+      const ref = doc(
+        db,
+        "users",
+        udoc.id,
+        "attendance",
+        `day-${dayNum}`
+      );
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const d = snap.data();
+        rows.push({
+          id: udoc.id,
+          name: d.name || "No Name",
+          email: d.email || "",
+          present: d.present,   // true or false
+          date: d.date || null,
+        });
+      }
+    }
+    setMarkedList(rows);
   } finally {
-    setSaving(false);
-    setTimeout(() => setMessage(""), 3000);
+    setMarkedLoading(false);
   }
 };
 
 
+
+  useEffect(() => {
+    loadUsers(selectedDay);
+    loadMarkedForDay(selectedDay);
+    // eslint-disable-next-line
+  }, [selectedDay]);
+
+  /* ---------- SAVE SINGLE USER ---------- */
+  const saveUser = async (u) => {
+    if (u.present === null) {
+      setMessage("Select Present or Absent");
+      return;
+    }
+
+    setSavingId(u.id);
+    setMessage("");
+
+    try {
+      const ref = doc(
+        db,
+        "users",
+        u.id,
+        "attendance",
+        `day-${selectedDay}`
+      );
+
+      await setDoc(
+        ref,
+        {
+          day: selectedDay,
+          date: selectedDate, // saved only
+          present: u.present,
+          name: u.name,
+          email: u.email,
+        },
+        { merge: true }
+      );
+
+      setMessage(`Attendance saved for ${u.name}`);
+      await loadMarkedForDay(selectedDay);
+    } catch (e) {
+      console.error(e);
+      setMessage("Save failed");
+    } finally {
+      setSavingId(null);
+      setTimeout(() => setMessage(""), 3000);
+    }
+  };
+
   /* ---------- UI ---------- */
   return (
     <div className="att-wrap">
-      <h2>Attendance — mark present (admin)</h2>
+      <h2>Attendance — Admin</h2>
 
       <div className="att-controls">
         <div className="att-day">
@@ -255,78 +203,16 @@ const saveSingle = async (item) => {
         </div>
 
         <div className="att-day">
-          <label>Date</label>
+          <label>Date (record only)</label>
           <input
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
           />
         </div>
-
-        <div className="att-search">
-          <label>Search by email or name</label>
-          <input
-            value={queryText}
-            onChange={(e) => setQueryText(e.target.value)}
-          />
-          <button onClick={handleSearch} disabled={loading}
-           className="att-save-one">
-            Search
-          </button>
-        </div>
       </div>
 
       {message && <div className="att-msg">{message}</div>}
-
-      {/* SEARCH RESULTS */}
-      {results.map((r, idx) => (
-        <div className="att-row" key={r.docId}>
-          <div>
-            <strong>{r.name}</strong> — {r.email}
-          </div>
-
-          <label className="att-present">
-  <input
-    type="checkbox"
-    checked={r.present === true}
-    onChange={() => {
-      setResults((prev) => {
-        const cp = [...prev];
-        cp[idx] = { ...cp[idx], present: true };
-        return cp;
-      });
-    }}
-  />
-  Present
-</label>
-
-<label className="att-present" style={{ marginLeft: 12 }}>
-  <input
-    type="checkbox"
-    checked={r.present === false}
-    onChange={() => {
-      setResults((prev) => {
-        const cp = [...prev];
-        cp[idx] = { ...cp[idx], present: false };
-        return cp;
-      });
-    }}
-  />
-  Absent
-</label>
-
-
-          <button
-            className="att-save-one"
-            onClick={() => saveSingle(r)}
-            disabled={saving}
-          >
-            Save
-          </button>
-        </div>
-      ))}
-
-      <div className="att-sep" />
 
       {/* MARKED */}
       <h3>Day {selectedDay} — Marked</h3>
@@ -350,7 +236,75 @@ const saveSingle = async (item) => {
                 <td>{m.name}</td>
                 <td>{m.email}</td>
                 <td>{formatDate(m.date)}</td>
-                <td>Yes</td>
+                <td>
+                  {m.present ? (
+                    <span className="badge badge-green">Present</span>
+                    ) : (
+                    <span className="badge badge-red">Absent</span>
+                  )}
+                </td>
+
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+
+      {/* -------- EVERY USER -------- */}
+      <h3>Every user — Day {selectedDay}</h3>
+      {loading ? (
+        <p>Loading…</p>
+      ) : (
+        <table className="att-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Present</th>
+              <th>Absent</th>
+              <th>Save</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((u, idx) => (
+              <tr key={u.id}>
+                <td>{u.name}</td>
+                <td>{u.email}</td>
+
+                <td style={{ textAlign: "center" }}>
+                  <input
+                    type="radio"
+                    checked={u.present === true}
+                    onChange={() => {
+                      const cp = [...users];
+                      cp[idx].present = true;
+                      setUsers(cp);
+                    }}
+                  />
+                </td>
+
+                <td style={{ textAlign: "center" }}>
+                  <input
+                    type="radio"
+                    checked={u.present === false}
+                    onChange={() => {
+                      const cp = [...users];
+                      cp[idx].present = false;
+                      setUsers(cp);
+                    }}
+                  />
+                </td>
+
+                <td>
+                  <button
+                    className="att-save-one"
+                    onClick={() => saveUser(u)}
+                    disabled={savingId === u.id}
+                  >
+                    Save
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -359,30 +313,7 @@ const saveSingle = async (item) => {
 
       <div className="att-sep" />
 
-      {/* EVERY USER */}
-      <h3>Every user — Day {selectedDay}</h3>
-      {allLoading ? (
-        <p>Loading…</p>
-      ) : (
-        <table className="att-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {allUsers.map((u, i) => (
-              <tr key={i}>
-                <td>{u.name}</td>
-                <td>{u.email}</td>
-                <td>{u.status}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      
     </div>
   );
 }
