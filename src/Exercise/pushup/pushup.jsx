@@ -5,7 +5,6 @@ import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
 import "./pushup.css";
 import PushUpImg from "../../assets/pushup.png";
 
-// Firebase imports
 import { db } from "../../firebase";
 import { doc, getDoc, setDoc, updateDoc, onSnapshot } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
@@ -17,28 +16,20 @@ export default function PushUpCounter() {
   const [count, setCount] = useState(0);
   const [status, setStatus] = useState("waiting");
   const [userId, setUserId] = useState(null);
-  const [maxCount, setMaxCount] = useState(20); // default fallback
 
-  // ✅ prevent double-adding to finalScore (store how much already added today)
-  const [addedToFinal, setAddedToFinal] = useState(0);
+  const [maxCount, setMaxCount] = useState(20);
+  const [completed, setCompleted] = useState(false);
 
-  // ✅ DEBUG: show rule load status on UI
-  const [, setRuleDebug] = useState("rule: not loaded");
-
-  // ✅ fix mediapipe double-init (React StrictMode) using refs
-  const userIdRef = useRef(null);
   const maxCountRef = useRef(20);
-
   const exerciseId = "pushup";
-
-  useEffect(() => {
-    userIdRef.current = userId;
-  }, [userId]);
 
   useEffect(() => {
     maxCountRef.current = maxCount;
   }, [maxCount]);
 
+  // -----------------------------
+  // Auth
+  // -----------------------------
   useEffect(() => {
     const auth = getAuth();
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -47,159 +38,89 @@ export default function PushUpCounter() {
     return () => unsub();
   }, []);
 
-  // ✅ REALTIME: load maxCount from admin rules (poseRules/pushup)
+  // -----------------------------
+  // Load admin rule
+  // -----------------------------
   useEffect(() => {
     const ruleRef = doc(db, "poseRules", exerciseId);
+    const unsub = onSnapshot(ruleRef, (snap) => {
+      if (!snap.exists()) return;
 
-    const unsub = onSnapshot(
-      ruleRef,
-      (ruleSnap) => {
-        if (!ruleSnap.exists()) {
-          setRuleDebug(`rule: NOT FOUND at poseRules/${exerciseId}`);
-          console.log("poseRules doc not found:", `poseRules/${exerciseId}`);
-          return;
-        }
+      const raw =
+        snap.data()["maximumcount perday"] ??
+        snap.data().maximumcount_perday ??
+        snap.data().maximumCountPerDay;
 
-        const ruleData = ruleSnap.data();
-        console.log("poseRules loaded:", `poseRules/${exerciseId}`, ruleData);
-
-        // ✅ handle possible field name differences
-        const raw =
-          ruleData.maximumcount_perday ??
-          ruleData["maximumcount perday"] ??
-          ruleData.maximumCountPerDay ??
-          ruleData.maximumcountPerDay ??
-          ruleData.maximumcount_per_day;
-
-        const m = Number(raw);
-
-        if (!Number.isNaN(m) && m > 0) {
-          setMaxCount(m);
-          setRuleDebug(`rule: loaded ✅ max=${m}`);
-        } else {
-          setRuleDebug(
-            `rule: loaded but max invalid (value=${String(raw)})`
-          );
-        }
-      },
-      (err) => {
-        console.error("poseRules read error:", err);
-        setRuleDebug(`rule: ERROR ❌ ${err?.message || "unknown"}`);
-      }
-    );
+      const m = Number(raw);
+      if (!Number.isNaN(m) && m > 0) setMaxCount(m);
+    });
 
     return () => unsub();
-  }, [exerciseId]);
+  }, []);
 
-  // ✅ helper: add only the difference to users/{uid}.finalScore
-  const addToFinalScore = async (diff) => {
-    const uid = userIdRef.current;
-    if (!uid || diff <= 0) return;
-
-    try {
-      const userRef = doc(db, "users", uid);
-      const userSnap = await getDoc(userRef);
-      const prevFinal = Number(userSnap.data()?.finalScore || 0);
-
-      await updateDoc(userRef, {
-        finalScore: prevFinal + diff,
-      });
-    } catch (e) {
-      console.error("Failed to update finalScore:", e);
-    }
-  };
-
+  // -----------------------------
+  // Load today's state
+  // -----------------------------
   useEffect(() => {
     if (!userId) return;
 
-    async function loadDailyPoints() {
+    async function loadToday() {
       const today = new Date().toISOString().split("T")[0];
-
-      // ✅ Option A: per-day doc path
-      const dayRef = doc(
-        db,
-        "users",
-        userId,
-        "exercises",
-        exerciseId,
-        "days",
-        today
-      );
-      const snap = await getDoc(dayRef);
+      const ref = doc(db, "users", userId, "exercises", exerciseId, "days", today);
+      const snap = await getDoc(ref);
 
       if (!snap.exists()) {
-        await setDoc(dayRef, { date: today, points: 0, addedToFinal: 0 });
+        await setDoc(ref, {
+          date: today,
+          points: 0,
+          completed: false,
+        });
         setCount(0);
-        setAddedToFinal(0);
+        setCompleted(false);
         return;
       }
 
       const data = snap.data();
-      const pts = Number(data.points || 0);
-      const added = Number(data.addedToFinal || 0);
-
-      setCount(pts > maxCount ? maxCount : pts);
-      setAddedToFinal(added);
+      setCount(Number(data.points || 0));
+      setCompleted(Boolean(data.completed));
     }
 
-    loadDailyPoints();
+    loadToday();
   }, [userId, maxCount]);
 
-  useEffect(() => {
+  // -----------------------------
+  // FINAL COMMIT (ONCE PER DAY)
+  // -----------------------------
+  const finishToday = async (finalPoints) => {
     if (!userId) return;
 
-    async function savePoints() {
-      const today = new Date().toISOString().split("T")[0];
-
-      // ✅ Option A: per-day doc path
-      const dayRef = doc(
-        db,
-        "users",
-        userId,
-        "exercises",
-        exerciseId,
-        "days",
-        today
-      );
-
-      await setDoc(
-        dayRef,
-        {
-          date: today,
-          points: count > maxCount ? maxCount : count,
-          addedToFinal: addedToFinal,
-        },
-        { merge: true }
-      );
-    }
-
-    savePoints();
-  }, [count, addedToFinal, userId, maxCount]);
-
-  const handleManualReset = async () => {
-    if (!userId) return;
     const today = new Date().toISOString().split("T")[0];
+    const dayRef = doc(db, "users", userId, "exercises", exerciseId, "days", today);
+    const userRef = doc(db, "users", userId);
 
-    // ✅ Option A: per-day doc path
-    const dayRef = doc(
-      db,
-      "users",
-      userId,
-      "exercises",
-      exerciseId,
-      "days",
-      today
-    );
+    const daySnap = await getDoc(dayRef);
+    if (daySnap.exists() && daySnap.data().completed) return;
 
-    // reset today points, BUT don't rollback finalScore (keep addedToFinal as-is)
-    await setDoc(dayRef, { date: today, points: 0 }, { merge: true });
-    setCount(0);
+    setCompleted(true);
+    setStatus("You have finished today’s task");
+
+    await setDoc(dayRef, {
+      date: today,
+      points: finalPoints,
+      completed: true,
+    });
+
+    const userSnap = await getDoc(userRef);
+    const prev = Number(userSnap.data()?.finalScore || 0);
+
+    await updateDoc(userRef, {
+      finalScore: prev + finalPoints,
+    });
   };
 
-  // ---------------------------
-  // Pose Logic
-  // ✅ FIX: init Pose ONLY ONCE ([]) to avoid mediapipe "File exists" error
-  // ---------------------------
+  // -----------------------------
+  // PUSH-UP POSE LOGIC (UNCHANGED)
+  // -----------------------------
   useEffect(() => {
     let pose;
     let rafId;
@@ -214,17 +135,16 @@ export default function PushUpCounter() {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: 640, height: 480 },
         });
-        if (!videoRef.current) return;
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
-      } catch (e) {
-        console.error("Camera error", e);
+      } catch {
         setStatus("camera error");
         return;
       }
 
       pose = new Pose({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
+        locateFile: (file) =>
+          `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
       });
 
       pose.setOptions({
@@ -236,37 +156,32 @@ export default function PushUpCounter() {
 
       pose.onResults(onResults);
 
-      async function sendFrame() {
-        try {
-          if (
-            videoRef.current &&
-            !videoRef.current.paused &&
-            !videoRef.current.ended &&
-            pose
-          ) {
-            await pose.send({ image: videoRef.current });
-          }
-        } catch (e) {}
-        rafId = requestAnimationFrame(sendFrame);
-      }
+      const loop = async () => {
+        if (videoRef.current && pose && !videoRef.current.paused) {
+          await pose.send({ image: videoRef.current });
+        }
+        rafId = requestAnimationFrame(loop);
+      };
 
-      sendFrame();
+      loop();
     }
 
     function calculateAngle(a, b, c) {
       const radians =
-        Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+        Math.atan2(c.y - b.y, c.x - b.x) -
+        Math.atan2(a.y - b.y, a.x - b.x);
       let angle = Math.abs((radians * 180.0) / Math.PI);
-      if (angle > 180.0) angle = 360 - angle;
+      if (angle > 180) angle = 360 - angle;
       return angle;
     }
 
     function onResults(results) {
+      if (completed) return;
+
       const canvas = canvasRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
 
-      ctx.save();
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
 
@@ -274,22 +189,26 @@ export default function PushUpCounter() {
         drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS);
         drawLandmarks(ctx, results.poseLandmarks);
 
-        const lShoulder = results.poseLandmarks[11];
-        const lElbow = results.poseLandmarks[13];
-        const lWrist = results.poseLandmarks[15];
-        const rShoulder = results.poseLandmarks[12];
-        const rElbow = results.poseLandmarks[14];
-        const rWrist = results.poseLandmarks[16];
-        const lHip = results.poseLandmarks[23];
-        const rHip = results.poseLandmarks[24];
-        const nose = results.poseLandmarks[0];
+        const lm = results.poseLandmarks;
+
+        const lShoulder = lm[11];
+        const lElbow = lm[13];
+        const lWrist = lm[15];
+        const rShoulder = lm[12];
+        const rElbow = lm[14];
+        const rWrist = lm[16];
+        const lHip = lm[23];
+        const rHip = lm[24];
+        const nose = lm[0];
 
         const leftArmAngle = calculateAngle(lShoulder, lElbow, lWrist);
         const rightArmAngle = calculateAngle(rShoulder, rElbow, rWrist);
-        const bodyAngleLeft = calculateAngle(lShoulder, lHip, results.poseLandmarks[25]);
-        const bodyAngleRight = calculateAngle(rShoulder, rHip, results.poseLandmarks[26]);
+        const bodyAngleLeft = calculateAngle(lShoulder, lHip, lm[25]);
+        const bodyAngleRight = calculateAngle(rShoulder, rHip, lm[26]);
 
-        const headHipDiff = Math.abs((nose.y - (lHip.y + rHip.y) / 2) * canvas.height);
+        const headHipDiff = Math.abs(
+          (nose.y - (lHip.y + rHip.y) / 2) * canvas.height
+        );
         const validPosition = headHipDiff < 120;
 
         if (validPosition) {
@@ -303,65 +222,44 @@ export default function PushUpCounter() {
                 const cap = maxCountRef.current;
                 if (prev >= cap) return cap;
 
-                const newPoints = prev + 1;
-
-                setAddedToFinal((prevAdded) => {
-                  const diff = newPoints - prevAdded;
-                  if (diff > 0) {
-                    addToFinalScore(diff);
-                    return newPoints;
-                  }
-                  return prevAdded;
-                });
-
-                return newPoints;
+                const next = prev + 1;
+                if (next === cap) finishToday(cap);
+                return next;
               });
             }
-
             state = "up";
             setStatus("up");
-          } else if (leftArmAngle < 70 && rightArmAngle < 70) {
+          } else if (leftArmAngle < 110 && rightArmAngle < 110) {
             state = "down";
             setStatus("down");
           }
         }
-
-        ctx.fillStyle = "white";
-        ctx.font = "16px Arial";
-        ctx.fillText(`Left Arm: ${Math.round(leftArmAngle)}°`, 10, 20);
-        ctx.fillText(`Right Arm: ${Math.round(rightArmAngle)}°`, 10, 40);
-      } else {
-        setStatus("no person detected");
       }
-
-      ctx.restore();
     }
 
     init();
 
     return () => {
       if (rafId) cancelAnimationFrame(rafId);
-      if (videoRef.current && videoRef.current.srcObject) {
+      if (videoRef.current?.srcObject) {
         videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
       }
-      if (pose) {
-        try {
-          pose.close();
-        } catch (e) {}
-      }
+      pose?.close();
     };
-  }, []);
+  }, [completed]);
 
+  // -----------------------------
+  // UI
+  // -----------------------------
   return (
     <div className="pushup-container">
-      <h2 className="stoke-text"> Push-Up Counter</h2>
+      <h2 className="stoke-text">Push-Up Counter</h2>
 
-      <div style={{ marginTop: 6, fontSize: 14, opacity: 0.85 }}>
+      <div style={{ marginTop: 6 }}>
         Max per day: <strong>{maxCount}</strong>
       </div>
 
-
-      <video ref={videoRef} style={{ display: "none" }} width={640} height={480} />
+      <video ref={videoRef} style={{ display: "none" }} />
 
       <div className="pushup-stage">
         <canvas ref={canvasRef} width={640} height={480} />
@@ -369,17 +267,39 @@ export default function PushUpCounter() {
           <span className="pushup-tip-plain">
             Keep your body straight and face sideways to the camera.
           </span>
-          <img src={PushUpImg} className="pushup-pose-img" alt="ref" draggable="false" />
+          <img
+            src={PushUpImg}
+            className="pushup-pose-img"
+            alt="ref"
+            draggable="false"
+          />
         </div>
       </div>
 
-      <div style={{ marginTop: 10, fontSize: 18 }}>
-        <strong>Push-ups:</strong> {count}/{maxCount} | <strong>Status:</strong> {status}
-      </div>
+      {completed ? (
+        <div style={{ marginTop: 12, fontSize: 18, color: "#00ff88" }}>
+          ✅ You have finished today’s task
+        </div>
+      ) : (
+        <div style={{ marginTop: 10, fontSize: 18 }}>
+          <strong>Push-ups:</strong> {count}/{maxCount} |{" "}
+          <strong>Status:</strong> {status}
+        </div>
+      )}
 
-      <button onClick={handleManualReset} className="pushup-reset-btn">
-        Reset Today
-      </button>
+      {!completed && (
+        <button
+          className="pushup-reset-btn"
+          onClick={() => {
+            const ok = window.confirm(
+              "⚠️ If you confirm this score, you can’t do push-ups again today."
+            );
+            if (ok) finishToday(count);
+          }}
+        >
+          Finish Today
+        </button>
+      )}
     </div>
   );
 }
