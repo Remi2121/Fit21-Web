@@ -16,10 +16,16 @@ export default function PushUpCounter() {
   const [count, setCount] = useState(0);
   const [status, setStatus] = useState("waiting");
   const [userId, setUserId] = useState(null);
+  const [maxCount, setMaxCount] = useState(20); // default fallback
 
-  const [maxCount, setMaxCount] = useState(20);
-  const [completed, setCompleted] = useState(false);
+  // ✅ prevent double-adding to finalScore (store how much already added today)
+  const [addedToFinal, setAddedToFinal] = useState(0);
 
+  // ✅ DEBUG: show rule load status on UI
+  const [, setRuleDebug] = useState("rule: not loaded");
+
+  // ✅ fix mediapipe double-init (React StrictMode) using refs
+  const userIdRef = useRef(null);
   const maxCountRef = useRef(20);
   const exerciseId = "pushup";
 
@@ -289,7 +295,7 @@ export default function PushUpCounter() {
 
       {!completed && (
         <button
-          className="pushup-reset-btn"
+        className="pushup-reset-btn"
           onClick={() => {
             const ok = window.confirm(
               "⚠️ If you confirm this score, you can’t do push-ups again today."
