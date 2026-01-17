@@ -188,7 +188,7 @@ export default function Rules() {
     try {
       const payload = {
         Seconds: Number(puSeconds),
-        maxPoints: Number(puMaxPoints),
+        maxPoints: 1,
         ["maximumcount perday"]: Number(puPerDayMax),
         updatedAt: serverTimestamp(),
       };
@@ -357,7 +357,7 @@ export default function Rules() {
     try {
       const payload = {
         Seconds: Number(sqSeconds),
-        maxPoints: Number(sqMaxPoints),
+        maxPoints: 1,
         ["maximumcount perday"]: Number(sqPerDayMax),
         updatedAt: serverTimestamp(),
       };
@@ -765,29 +765,20 @@ export default function Rules() {
       </h2>
 
       <form className="rules-form" onSubmit={handleSavePushup}>
-        <label className="rules-label">
-          Seconds (timer window)
-          <input
-            className="rules-input"
-            type="number"
-            value={puSeconds}
-            onChange={(e) => setPuSeconds(e.target.value)}
-            min="1"
-            step="1"
-          />
-        </label>
+
 
         <label className="rules-label">
-          maxPoints (per-session cap)
-          <input
-            className="rules-input"
-            type="number"
-            value={puMaxPoints}
-            onChange={(e) => setPuMaxPoints(e.target.value)}
-            min="1"
-            step="1"
-          />
-        </label>
+  maxPoints (per-session cap)
+  <input
+    className="rules-input"
+    type="number"
+    value={1}
+    disabled
+    min="1"
+    step="1"
+  />
+</label>
+
 
         <label className="rules-label">
           maximumcount perday (daily cap)
@@ -823,29 +814,20 @@ export default function Rules() {
       </h2>
 
       <form className="rules-form" onSubmit={handleSaveSquat}>
-        <label className="rules-label">
-          Seconds (timer window)
-          <input
-            className="rules-input"
-            type="number"
-            value={sqSeconds}
-            onChange={(e) => setSqSeconds(e.target.value)}
-            min="1"
-            step="1"
-          />
-        </label>
+        
 
         <label className="rules-label">
-          maxPoints (per-session cap)
-          <input
-            className="rules-input"
-            type="number"
-            value={sqMaxPoints}
-            onChange={(e) => setSqMaxPoints(e.target.value)}
-            min="1"
-            step="1"
-          />
-        </label>
+  maxPoints (per-session cap)
+  <input
+    className="rules-input"
+    type="number"
+    value={1}
+    disabled
+    min="1"
+    step="1"
+  />
+</label>
+
 
         <label className="rules-label">
           maximumcount perday (daily cap)
