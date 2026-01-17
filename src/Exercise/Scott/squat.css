@@ -92,31 +92,6 @@
   background-color: #666;
 }
 
-<<<<<<< HEAD
-/* ✅ Finished message (optional class if you want) */
-/* Finished message */
-.squat-finished {
-  margin-top: 8px;      /* tight gap below camera */
-  font-size: 18px;
-  color: #00ff88;
-  font-weight: 600;
-  text-align: center;
-}
-
-/* Live status text */
-.squat-status {
-  margin-top: 8px;
-  font-size: 18px;
-  color: #ffffff;
-  text-align: center;
-}
-
-.squat-camera-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-=======
 /* Finish Today button — like your "User Rank" style */
 .squat-reset-btn {
   width: min(300px, 92%);
@@ -167,4 +142,3 @@
 }
 
 
->>>>>>> 6ef78e7466bc2f6f2bca2ddc8928f7450ff31779
