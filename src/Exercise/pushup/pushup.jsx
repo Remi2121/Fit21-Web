@@ -185,7 +185,7 @@ export default function PushUpCounter() {
             }
             state = "up";
             setStatus("up");
-          } else if (leftArmAngle < 70 && rightArmAngle < 70) {
+          } else if (leftArmAngle < 110 && rightArmAngle < 110) {
             state = "down";
             setStatus("down");
           }
