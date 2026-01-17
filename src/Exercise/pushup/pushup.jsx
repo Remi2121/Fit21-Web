@@ -18,6 +18,9 @@ export default function PushUpCounter() {
   const [userId, setUserId] = useState(null);
   const [maxCount, setMaxCount] = useState(20); // default fallback
 
+  const [completed, setCompleted] = useState(false);
+
+
   // ✅ prevent double-adding to finalScore (store how much already added today)
   const [addedToFinal, setAddedToFinal] = useState(0);
 
