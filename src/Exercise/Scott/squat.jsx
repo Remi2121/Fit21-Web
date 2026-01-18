@@ -240,73 +240,75 @@ export default function SquatCounter() {
   // -----------------------------
   // UI
   // -----------------------------
-  return (
-    <div className="squat-container">
-      <h2 className="stoke-text">Squat Counter</h2>
+return (
+  <div className="squat-container">
+    <h2 className="stoke-text">Squat Counter</h2>
 
-      <div style={{ marginTop: 6 }}>
-        Max per day: <strong>{maxCount}</strong>
+    <div style={{ marginTop: 6 }}>
+      Max per day: <strong>{maxCount}</strong>
+    </div>
+
+    <video ref={videoRef} style={{ display: "none" }} />
+
+    <div className="squat-stage">
+      {/* ✅ CAMERA SIDE */}
+      <div className="squat-camera-box">
+        <canvas ref={canvasRef} width={640} height={480} />
+
+        {completed ? (
+          <div className="squat-finished">✅ You have finished today’s task</div>
+        ) : (
+          <>
+            <div className="squat-status">
+              <strong>Squats:</strong> {count}/{maxCount} |{" "}
+              <strong>Status:</strong> {status}
+            </div>
+
+            <button
+              className="squat-reset-btn"
+              onClick={() => {
+                const ok = window.confirm(
+                  "⚠️ If you confirm this score, you can’t do squats again today."
+                );
+                if (ok) finishToday(count);
+              }}
+            >
+              Finish Today
+            </button>
+          </>
+        )}
       </div>
 
-      <video ref={videoRef} style={{ display: "none" }} />
+      {/* ✅ INSTRUCTIONS SIDE */}
+      <div className="squat-plain">
+        <img src={SquatImg} className="squat-pose-img" alt="ref" />
 
-      <div className="squat-stage">
-        <canvas ref={canvasRef} width={640} height={480} />
-<div className="squat-plain">
-  <img src={SquatImg} className="squat-pose-img" alt="ref" />
+        <div className="squat-instructions">
+  <ul className="squat-points">
+    <li>If the camera is not working, please refresh the page and try again.</li>
 
-  <div className="squat-instructions">
-    <span className="squat-tip-plain">
-      If the camera is not working, please refresh the page and try again.
-    </span>
+    <li>Stand in a proper side view facing the camera.</li>
 
-    <span className="squat-tip-plain">
-      Stand in proper side view facing the camera.
-    </span>
+    <li>
+      <strong>UP position:</strong> Keep your legs fully straight and raise both
+      hands above shoulder level (more than 90°).
+    </li>
 
-    <span className="squat-tip-plain">
-      <strong>UP:</strong> Keep your legs fully straight. Raise both hands above
-      shoulder level (more than 90°).
-    </span>
+    <li>
+      <strong>DOWN position:</strong> Bend your knees and lower your body into a
+      squat. Keep your back straight. Your hands can stay raised.
+    </li>
 
-    <span className="squat-tip-plain">
-      <strong>DOWN:</strong> Bend your knees and lower your body into a squat.
-      Keep your back straight. Your hands can stay raised.
-    </span>
-
-    <span className="squat-tip-plain">
-      When you reach the daily maximum, press <b>“Finish Today”</b> to confirm
-      and complete today’s exercise.
-    </span>
-  </div>
+    <li>
+      Once you reach the daily maximum, press{" "}
+      <strong>“Finish Today”</strong> to confirm and complete today’s exercise.
+    </li>
+  </ul>
 </div>
 
       </div>
-
-      {completed ? (
-        <div style={{ marginTop: 12, fontSize: 18, color: "#00ff88" }}>
-          ✅ You have finished today’s task
-        </div>
-      ) : (
-        <div style={{ marginTop: 10, fontSize: 18 }}>
-          <strong>Squats:</strong> {count}/{maxCount} |{" "}
-          <strong>Status:</strong> {status}
-        </div>
-      )}
-
-      {!completed && (
-        <button
-          className="squat-reset-btn"
-          onClick={() => {
-            const ok = window.confirm(
-              "⚠️ If you confirm this score, you can’t do squats again today."
-            );
-            if (ok) finishToday(count);
-          }}
-        >
-          Finish Today
-        </button>
-      )}
     </div>
-  );
+  </div>
+);
+
 }
