@@ -73,15 +73,7 @@ export default function SquatCounter() {
 
     async function loadToday() {
       const today = new Date().toISOString().split("T")[0];
-      const ref = doc(
-        db,
-        "users",
-        userId,
-        "exercises",
-        exerciseId,
-        "days",
-        today
-      );
+      const ref = doc(db, "users", userId, "exercises", exerciseId, "days", today);
       const snap = await getDoc(ref);
 
       if (!snap.exists()) {
@@ -110,15 +102,7 @@ export default function SquatCounter() {
     setStatus("You have finished today’s task");
 
     const today = new Date().toISOString().split("T")[0];
-    const dayRef = doc(
-      db,
-      "users",
-      userId,
-      "exercises",
-      exerciseId,
-      "days",
-      today
-    );
+    const dayRef = doc(db, "users", userId, "exercises", exerciseId, "days", today);
     const userRef = doc(db, "users", userId);
 
     const daySnap = await getDoc(dayRef);
@@ -188,7 +172,8 @@ export default function SquatCounter() {
 
     function calculateAngle(a, b, c) {
       const radians =
-        Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+        Math.atan2(c.y - b.y, c.x - b.x) -
+        Math.atan2(a.y - b.y, a.x - b.x);
       let angle = Math.abs((radians * 180.0) / Math.PI);
       if (angle > 180) angle = 360 - angle;
       return angle;
@@ -255,68 +240,75 @@ export default function SquatCounter() {
   // -----------------------------
   // UI
   // -----------------------------
-  return (
-    <div className="squat-container">
-      <h2 className="stoke-text">Squat Counter</h2>
+return (
+  <div className="squat-container">
+    <h2 className="stoke-text">Squat Counter</h2>
 
-      <div style={{ marginTop: 6 }}>
-        Max per day: <strong>{maxCount}</strong>
-      </div>
-
-      <video ref={videoRef} style={{ display: "none" }} />
-
-      <div className="squat-stage">
-        <div className="squat-camera-box">
-        <canvas ref={canvasRef} width={640} height={480} />
-        {completed ? (
-          <div className="squat-finished">
-            ✅ You have finished today’s task
-          </div>
-        ) : (
-          <div className="squat-status">
-            <strong>Squats:</strong> {count}/{maxCount} |{" "}
-            <strong>Status:</strong> {status}
-          </div>
-        )}
-        </div>
-        <div className="squat-plain">
-          <span className="squat-tip-plain">
-          If the camera is not working, please refresh the page and try again.
-          </span>
-          <span className="squat-tip-plain">
-            Stand in proper side view facing the camera.
-          </span>
-          <span className="squat-tip-plain">
-            UP: Keep your legs fully straight. Raise both hands above shoulder
-            level (more than 90°).
-          </span>
-          <span className="squat-tip-plain">
-            DOWN: Bend your knees and lower your body into a squat. Keep your
-            back straight. Your hands can stay raised.
-          </span>
-          <span className="squat-tip-plain">
-
-            When you reach the daily maximum, press “Finish Today” to confirm
-            and complete today’s exercise.
-          </span>
-          
-          <img src={SquatImg} className="squat-pose-img" alt="ref" />
-        </div>
-      </div>
-
-      {!completed && (
-        <button
-          className="squat-reset-btn"
-          onClick={() => {
-            const ok = window.confirm(
-              "⚠️ If you confirm this score, you can’t do squats again today."
-            );
-            if (ok) finishToday(count);
-          }}
-        >
-          Finish Today
-        </button>
-      )}
+    <div style={{ marginTop: 6 }}>
+      Max per day: <strong>{maxCount}</strong>
     </div>
-  );
+
+    <video ref={videoRef} style={{ display: "none" }} />
+
+    <div className="squat-stage">
+      {/* ✅ CAMERA SIDE */}
+      <div className="squat-camera-box">
+        <canvas ref={canvasRef} width={640} height={480} />
+
+        {completed ? (
+          <div className="squat-finished">✅ You have finished today’s task</div>
+        ) : (
+          <>
+            <div className="squat-status">
+              <strong>Squats:</strong> {count}/{maxCount} |{" "}
+              <strong>Status:</strong> {status}
+            </div>
+
+            <button
+              className="squat-reset-btn"
+              onClick={() => {
+                const ok = window.confirm(
+                  "⚠️ If you confirm this score, you can’t do squats again today."
+                );
+                if (ok) finishToday(count);
+              }}
+            >
+              Finish Today
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* ✅ INSTRUCTIONS SIDE */}
+      <div className="squat-plain">
+        <img src={SquatImg} className="squat-pose-img" alt="ref" />
+
+        <div className="squat-instructions">
+  <ul className="squat-points">
+    <li>If the camera is not working, please refresh the page and try again.</li>
+
+    <li>Stand in a proper side view facing the camera.</li>
+
+    <li>
+      <strong>UP position:</strong> Keep your legs fully straight and raise both
+      hands above shoulder level (more than 90°).
+    </li>
+
+    <li>
+      <strong>DOWN position:</strong> Bend your knees and lower your body into a
+      squat. Keep your back straight. Your hands can stay raised.
+    </li>
+
+    <li>
+      Once you reach the daily maximum, press{" "}
+      <strong>“Finish Today”</strong> to confirm and complete today’s exercise.
+    </li>
+  </ul>
+</div>
+
+      </div>
+    </div>
+  </div>
+);
+
 }
