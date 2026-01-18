@@ -16,19 +16,10 @@ export default function PushUpCounter() {
   const [count, setCount] = useState(0);
   const [status, setStatus] = useState("waiting");
   const [userId, setUserId] = useState(null);
-  const [maxCount, setMaxCount] = useState(20); // default fallback
 
+  const [maxCount, setMaxCount] = useState(20);
   const [completed, setCompleted] = useState(false);
 
-
-  // ✅ prevent double-adding to finalScore (store how much already added today)
-  const [addedToFinal, setAddedToFinal] = useState(0);
-
-  // ✅ DEBUG: show rule load status on UI
-  const [, setRuleDebug] = useState("rule: not loaded");
-
-  // ✅ fix mediapipe double-init (React StrictMode) using refs
-  const userIdRef = useRef(null);
   const maxCountRef = useRef(20);
   const exerciseId = "pushup";
 
@@ -151,10 +142,11 @@ export default function PushUpCounter() {
         return;
       }
 
-      pose = new Pose({
-        locateFile: (file) =>
-          `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
-      });
+pose = new Pose({
+  locateFile: (file) =>
+    `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
+});
+
 
       pose.setOptions({
         modelComplexity: 1,
@@ -260,55 +252,88 @@ export default function PushUpCounter() {
   // -----------------------------
   // UI
   // -----------------------------
-  return (
-    <div className="pushup-container">
-      <h2 className="stoke-text">Push-Up Counter</h2>
+return (
+  <div className="pushup-container">
+    <h2 className="stoke-text">Push-Up Counter</h2>
 
-      <div style={{ marginTop: 6 }}>
-        Max per day: <strong>{maxCount}</strong>
-      </div>
-
-      <video ref={videoRef} style={{ display: "none" }} />
-
-      <div className="pushup-stage">
-        <canvas ref={canvasRef} width={640} height={480} />
-        <div className="pushup-plain">
-          <span className="pushup-tip-plain">
-            Keep your body straight and face sideways to the camera.
-          </span>
-          <img
-            src={PushUpImg}
-            className="pushup-pose-img"
-            alt="ref"
-            draggable="false"
-          />
-        </div>
-      </div>
-
-      {completed ? (
-        <div style={{ marginTop: 12, fontSize: 18, color: "#00ff88" }}>
-          ✅ You have finished today’s task
-        </div>
-      ) : (
-        <div style={{ marginTop: 10, fontSize: 18 }}>
-          <strong>Push-ups:</strong> {count}/{maxCount} |{" "}
-          <strong>Status:</strong> {status}
-        </div>
-      )}
-
-      {!completed && (
-        <button
-        className="pushup-reset-btn"
-          onClick={() => {
-            const ok = window.confirm(
-              "⚠️ If you confirm this score, you can’t do push-ups again today."
-            );
-            if (ok) finishToday(count);
-          }}
-        >
-          Finish Today
-        </button>
-      )}
+    <div style={{ marginTop: 6 }}>
+      Max per day: <strong>{maxCount}</strong>
     </div>
-  );
+
+    <video ref={videoRef} style={{ display: "none" }} />
+
+    <div className="pushup-stage">
+      {/* 🔴 CAMERA + STATUS SIDE */}
+      <div className="pushup-camera-box">
+        <canvas ref={canvasRef} width={640} height={480} />
+
+        {completed ? (
+          <div className="pushup-finished">
+            ✅ You have finished today’s task
+          </div>
+        ) : (
+          <>
+            <div className="pushup-status">
+              <strong>Push-ups:</strong> {count}/{maxCount} |{" "}
+              <strong>Status:</strong> {status}
+            </div>
+
+            <button
+              className="pushup-reset-btn"
+              onClick={() => {
+                const ok = window.confirm(
+                  "⚠️ If you confirm this score, you can’t do push-ups again today."
+                );
+                if (ok) finishToday(count);
+              }}
+            >
+              Finish Today
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* 🔵 INSTRUCTIONS SIDE */}
+      <div className="pushup-plain">
+        <img
+          src={PushUpImg}
+          className="pushup-pose-img"
+          alt="ref"
+          draggable="false"
+        />
+
+        <div className="pushup-instructions">
+          <ul className="pushup-points">
+            <li>
+              If the camera is not working, please refresh the page and try again.
+            </li>
+
+            <li>
+              Position yourself in a proper side view facing the camera.
+            </li>
+
+            <li>
+              <strong>UP position:</strong> Keep your arms fully straight
+              (arm angle &gt; 160°) and your body in a straight line from head
+              to heels (body angle &gt; 160°).
+            </li>
+
+            <li>
+              <strong>DOWN position:</strong> Bend your elbows and lower your body
+              until your arms are bent (arm angle &lt; 110°). Keep your core
+              tight and back straight.
+            </li>
+
+            <li>
+              When you reach the daily maximum, press{" "}
+              <strong>“Finish Today”</strong> to confirm and complete today’s
+              exercise.
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 }
