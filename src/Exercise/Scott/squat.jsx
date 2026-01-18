@@ -252,12 +252,35 @@ export default function SquatCounter() {
 
       <div className="squat-stage">
         <canvas ref={canvasRef} width={640} height={480} />
-        <div className="squat-plain">
-          <span className="squat-tip-plain">
-            Stand in proper side view facing the camera.
-          </span>
-          <img src={SquatImg} className="squat-pose-img" alt="ref" />
-        </div>
+<div className="squat-plain">
+  <img src={SquatImg} className="squat-pose-img" alt="ref" />
+
+  <div className="squat-instructions">
+    <span className="squat-tip-plain">
+      If the camera is not working, please refresh the page and try again.
+    </span>
+
+    <span className="squat-tip-plain">
+      Stand in proper side view facing the camera.
+    </span>
+
+    <span className="squat-tip-plain">
+      <strong>UP:</strong> Keep your legs fully straight. Raise both hands above
+      shoulder level (more than 90°).
+    </span>
+
+    <span className="squat-tip-plain">
+      <strong>DOWN:</strong> Bend your knees and lower your body into a squat.
+      Keep your back straight. Your hands can stay raised.
+    </span>
+
+    <span className="squat-tip-plain">
+      When you reach the daily maximum, press <b>“Finish Today”</b> to confirm
+      and complete today’s exercise.
+    </span>
+  </div>
+</div>
+
       </div>
 
       {completed ? (
