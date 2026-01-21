@@ -16,13 +16,13 @@ export default function AnnouncementSection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // form-la day, title, message + mediaUrl
   const [form, setForm] = useState({
-    day: "",
-    title: "",
-    message: "",
-    mediaUrl: "",          // 👈 NEW
-  });
+  day: "",
+  title: "",
+  message: "",
+  linkUrl: "",   // 🔥 NEW
+});
+
 
   const [editingId, setEditingId] = useState(null);
   const [mediaFile, setMediaFile] = useState(null);
@@ -61,7 +61,7 @@ export default function AnnouncementSection() {
       day: "",
       title: "",
       message: "",
-      mediaUrl: "",        // 👈 reset pannren
+     linkUrl: "",        // 👈 reset pannren
     });
     setMediaFile(null);
     setEditingId(null);
@@ -97,23 +97,22 @@ export default function AnnouncementSection() {
       setError("");
       setUploading(true);
 
-      // 👇 mediaUrl-um include pannuren
-      const payload = {
-        day: form.day,
-        title: form.title,
-        message: form.message,
-        mediaUrl: form.mediaUrl || "",
-      };
+const payload = {
+  day: form.day,
+  title: form.title,
+  message: form.message,
+  linkUrl: form.linkUrl || "",   // 🔥 link separate
+};
 
-      // Editing & no new file -> existing media preserve
-      if (editingId && !mediaFile) {
-        const existing = items.find((x) => x.id === editingId);
-        if (existing) {
-          // user form.mediaUrl la change pannirundha adhuthaan use aagum
-          if (!payload.mediaUrl) payload.mediaUrl = existing.mediaUrl || "";
-          payload.mediaType = existing.mediaType || "";
-        }
-      }
+
+if (editingId && !mediaFile) {
+  const existing = items.find((x) => x.id === editingId);
+  if (existing) {
+    payload.mediaUrl = existing.mediaUrl || "";
+    payload.mediaType = existing.mediaType || "";
+  }
+}
+
 
       // New file upload pannirundhaa → Storage la upload panni override pannalaam
       if (mediaFile) {
@@ -142,11 +141,12 @@ export default function AnnouncementSection() {
   function handleEdit(item) {
     setEditingId(item.id);
     setForm({
-      day: item.day?.toString() || "",
-      title: item.title || "",
-      message: item.message || item.body || "",
-      mediaUrl: item.mediaUrl || "",   // 👈 existing mediaUrl load pannuren
-    });
+  day: item.day?.toString() || "",
+  title: item.title || "",
+  message: item.message || item.body || "",
+  linkUrl: item.linkUrl || "",   // 🔥 correct
+});
+
     setMediaFile(null); // media existing-a irukkum, change panna new file choose pannalam
   }
 
@@ -278,28 +278,29 @@ export default function AnnouncementSection() {
             />
           </div>
 
-          {/* Media URL input */}
-          <div style={{ gridColumn: "span 4 / span 4" }}>
-            <label style={{ fontSize: "0.85rem" }}>
-              Media URL (optional – any link: image, pdf, folder...)
-            </label>
-            <input
-              type="text"
-              name="mediaUrl"
-              value={form.mediaUrl}
-              onChange={handleChange}
-              placeholder="Paste media link here"
-              style={{
-                width: "100%",
-                marginTop: "0.25rem",
-                padding: "0.4rem 0.6rem",
-                borderRadius: "6px",
-                border: "1px solid #444",
-                background: "rgba(0,0,0,0.6)",
-                color: "#fff",
-              }}
-            />
-          </div>
+          {/* External Link */}
+<div style={{ gridColumn: "span 4 / span 4" }}>
+  <label style={{ fontSize: "0.85rem" }}>
+    Attachment / Link (YouTube / PDF / Drive / Website)
+  </label>
+  <input
+    type="text"
+    name="linkUrl"
+    value={form.linkUrl}
+    onChange={handleChange}
+    placeholder="https://youtube.com/... or https://example.com/file.pdf"
+    style={{
+      width: "100%",
+      marginTop: "0.25rem",
+      padding: "0.4rem 0.6rem",
+      borderRadius: "6px",
+      border: "1px solid #444",
+      background: "rgba(0,0,0,0.6)",
+      color: "#fff",
+    }}
+  />
+</div>
+
 
           {/* Media (file upload only) */}
           <div style={{ gridColumn: "span 4 / span 4" }}>
