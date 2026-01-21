@@ -11,6 +11,8 @@ import {
 } from "firebase/firestore";
 import { ref as storageRef, getDownloadURL } from "firebase/storage";
 import { motion } from "framer-motion";
+import leftArrow from "../assets/leftArrow.png";
+import rightArrow from "../assets/rightArrow.png";
 
 
 /* ---------- Helpers ---------- */
@@ -216,6 +218,11 @@ export default function Announcement() {
   }, []);
 
   const ann = useMemo(() => (items.length ? items[idx] : null), [items, idx]);
+  const hasPrev = idx > 0;
+  const hasNext = idx < items.length - 1;
+  const prev = () => setIdx((p) => (p > 0 ? p - 1 : p));
+  const next = () => setIdx((p) => (p < items.length - 1 ? p + 1 : p));
+
 
   return (
     <section className="announce-wrap">
@@ -252,26 +259,68 @@ export default function Announcement() {
                 aria-hidden
               />
 
-{/* === MAIN IMAGE (mediaUrl = image only) === */}
-{ann.mediaUrl && (
-  <img
-    className="media-box"
-    src={ann.mediaUrl}
-    alt={ann.title || "Announcement"}
-  />
-)}
+              {isYouTube(ann.mediaUrl, ann.mediaType) ? (
+                <div className="media-frame" key={`y-${ann.id}`}>
+                  <iframe
+                    className="yt-frame"
+                    src={getYouTubeEmbed(ann.mediaUrl) || ""}
+                    title={ann.title || "YouTube video"}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    loading="lazy"
+                  />
+                </div>
+              ) : isVideoFile(ann.mediaUrl, ann.mediaType) ? (
+                <video key={`v-${ann.id}`} className="media-box" controls playsInline>
+                  <source src={ann.mediaUrl} type={guessMime(ann.mediaUrl)} />
+                  Your browser cannot play this video.
+                </video>
+              ) : isImageFile(ann.mediaUrl, ann.mediaType) ? (
+                <img
+                  key={`i-${ann.id}`}
+                  className="media-box"
+                  src={ann.mediaUrl}
+                  alt={ann.title || "Announcement"}
+                />
+              ) : isGenericLink(ann.mediaUrl, ann.mediaType) ? (
+                <a
+                  key={`g-${ann.id}`}
+                  href={toAbsolute(ann.mediaUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="anno-cta"
+                >
+                  Open attachment
+                </a>
+              ) : (
+                <div className="media-box no-media">No media</div>
+              )}
 
-{/* === EXTRA LINK BELOW IMAGE (linkUrl = YouTube / PDF / any URL) === */}
-{ann.linkUrl && (
-  <a
-    href={toAbsolute(ann.linkUrl)}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="anno-cta below-media"
-  >
-    🔗 Open attachment
-  </a>
-)}
+                          {items.length > 1 && (
+                <div className="anoarrows">
+                  <img
+                    src={leftArrow}
+                    alt="Previous"
+                    className={`arrow-img ${hasPrev ? "" : "disabled"}`}
+                    onClick={hasPrev ? prev : undefined}
+                    tabIndex={0}
+                    onKeyDown={(e) =>
+                      hasPrev && (e.key === "Enter" || e.key === " ") ? prev() : null
+                    }
+                  />
+                  <img
+                    src={rightArrow}
+                    alt="Next"
+                    className={`arrow-img ${hasNext ? "" : "disabled"}`}
+                    onClick={hasNext ? next : undefined}
+                    tabIndex={0}
+                    onKeyDown={(e) =>
+                      hasNext && (e.key === "Enter" || e.key === " ") ? next() : null
+                    }
+                  />
+                </div>
+              )}
+
             </div>
 
             <motion.div
@@ -291,10 +340,6 @@ export default function Announcement() {
     ))}
   </div>
 )}
-
-
-
-
             </motion.div>
           </div>
         )}
