@@ -9,6 +9,13 @@
   background:rgb(43, 1, 1);
   mix-blend-mode: overlay;
 }
+.anno-cta.below-media {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 0.95rem;
+  color: #ffb3b3;
+  text-decoration: underline;
+}
 
 /* Card */
 .announce-card {
@@ -120,6 +127,25 @@
   line-height: 1.7;
   opacity: .95;
 }
+/* ✅ Announcement bullet text alignment fix */
+.anno-body {
+  line-height: 1.7;
+  text-align: justify;        /* admin format control */
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+
+.anno-body li {
+  margin-bottom: 10px;
+  line-height: 1.7;
+
+  /* 🔥 long word wrap fix */
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
 
 /* Arrow navigation (desktop placement near the right side) */
 .anoarrows {
@@ -242,4 +268,35 @@
 .anoarrows img:focus {
   outline: 3px solid rgba(226,59,59,0.25);
   outline-offset: 3px;
+}
+/* === Link shown below media === */
+.anno-cta.below-media {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  font-size: 14px;
+  font-weight: 500;
+  color: #ffb3b3;
+
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+
+  transition: all 0.25s ease;
+}
+
+.anno-cta.below-media:hover {
+  color: #ffffff;
+  background: rgba(255, 80, 80, 0.18);
+  border-color: rgba(255, 120, 120, 0.5);
+  box-shadow: 0 0 10px rgba(255, 80, 80, 0.35);
+  transform: translateY(-1px);
+}
+.anoarrows {
+  display: none !important;
 }
